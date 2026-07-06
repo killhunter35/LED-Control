@@ -14,188 +14,66 @@
 
     <style>
         :root {
-            --bg-dark: #000000;
-            --card-bg: #161618;
-            --card-border: #242426;
-            --accent-glow: #ffae00;
-            --accent-soft: rgba(255, 174, 0, 0.15);
-            --text-main: #ffffff;
-            --text-sec: #8e8e93;
-            --ios-blue: #0a84ff;
-            --ios-orange: #ff9f0a;
-            --ios-purple: #bf5af2;
-            --ios-green: #30d158;
+            --bg-dark: #000000; --card-bg: #161618; --card-border: #242426;
+            --accent-glow: #ffae00; --accent-soft: rgba(255, 174, 0, 0.15);
+            --text-main: #ffffff; --text-sec: #8e8e93;
+            --ios-blue: #0a84ff; --ios-orange: #ff9f0a; --ios-purple: #bf5af2; --ios-green: #30d158;
         }
-
-        * {
-            box-sizing: border-box; margin: 0; padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background-color: var(--bg-dark); color: var(--text-main);
-            display: flex; justify-content: center; min-height: 100vh;
-            padding: 10px 12px 85px 12px;
-        }
-
-        /* ---------------------------------------------------- */
-        /* YENİ: iOS PASSCODE (PIN KİLİT EKRANI) TASARIMI */
-        /* ---------------------------------------------------- */
-        #pin-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.96); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-            z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 30px;
-            transition: opacity 0.4s ease, visibility 0.4s ease;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; justify-content: center; min-height: 100vh; padding: 10px 12px 85px 12px; }
+        
+        /* PIN KİLİT EKRANI */
+        #pin-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.96); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 30px; transition: opacity 0.4s ease, visibility 0.4s ease; }
         #pin-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-        
-        .pin-header { text-align: center; }
-        .pin-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; }
-        .pin-header p { font-size: 13px; color: var(--text-sec); }
-
-        .pin-dots { display: flex; gap: 16px; margin: 10px 0; }
-        .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--text-sec); transition: all 0.2s; }
-        .dot.filled { background: var(--accent-glow); border-color: var(--accent-glow); box-shadow: 0 0 10px var(--accent-glow); }
-        .dot.error { border-color: #ff3b30; background: #ff3b30; animation: shake 0.4s; }
+        .pin-header { text-align: center; } .pin-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; } .pin-header p { font-size: 13px; color: var(--text-sec); }
+        .pin-dots { display: flex; gap: 16px; margin: 10px 0; } .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--text-sec); transition: all 0.2s; } .dot.filled { background: var(--accent-glow); border-color: var(--accent-glow); box-shadow: 0 0 10px var(--accent-glow); } .dot.error { border-color: #ff3b30; background: #ff3b30; animation: shake 0.4s; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25%, 75% { transform: translateX(-8px); } 50% { transform: translateX(8px); } }
-
         .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; max-width: 280px; width: 100%; }
-        .key-btn {
-            width: 75px; height: 75px; border-radius: 50%; background: #1c1c1e; border: 1px solid #2c2c2e;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer;
-            font-size: 26px; font-weight: 600; color: #fff; transition: background 0.15s, transform 0.1s;
-        }
-        .key-btn:active { background: #3a3a3c; transform: scale(0.92); }
-        .key-btn span { font-size: 10px; color: var(--text-sec); font-weight: 700; letter-spacing: 1.5px; margin-top: -2px; }
-        .key-btn.empty { background: transparent; border: none; cursor: default; }
-        /* ---------------------------------------------------- */
-
+        .key-btn { width: 75px; height: 75px; border-radius: 50%; background: #1c1c1e; border: 1px solid #2c2c2e; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; font-size: 26px; font-weight: 600; color: #fff; transition: background 0.15s, transform 0.1s; }
+        .key-btn:active { background: #3a3a3c; transform: scale(0.92); } .key-btn span { font-size: 10px; color: var(--text-sec); font-weight: 700; letter-spacing: 1.5px; margin-top: -2px; } .key-btn.empty { background: transparent; border: none; cursor: default; }
+        
         .app-container { width: 100%; max-width: 430px; display: flex; flex-direction: column; gap: 12px; }
-
-        /* Üst Başlık & Ayarlar */
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 5px 4px; }
-        .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
-        .header-right { display: flex; align-items: center; gap: 8px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 5px 4px; } .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; } .header-right { display: flex; align-items: center; gap: 8px; }
+        .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(48, 209, 88, 0.15); color: var(--ios-green); font-weight: 600; display: flex; align-items: center; gap: 5px; } .status-badge::before { content: ""; width: 6px; height: 6px; background: var(--ios-green); border-radius: 50%; box-shadow: 0 0 8px var(--ios-green); }
+        .settings-icon { width: 30px; height: 30px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; color: var(--text-main); }
         
-        .status-badge {
-            font-size: 11px; padding: 4px 10px; border-radius: 20px;
-            background: rgba(48, 209, 88, 0.15); color: var(--ios-green); font-weight: 600;
-            display: flex; align-items: center; gap: 5px;
-        }
-        .status-badge::before { content: ""; width: 6px; height: 6px; background: var(--ios-green); border-radius: 50%; box-shadow: 0 0 8px var(--ios-green); }
-        
-        .settings-icon {
-            width: 30px; height: 30px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border);
-            display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; color: var(--text-main);
-        }
-
-        /* Sekmeler */
-        .tab-content { display: none; flex-direction: column; gap: 12px; animation: fadeIn 0.25s ease; }
-        .tab-content.active { display: flex; }
+        .tab-content { display: none; flex-direction: column; gap: 12px; animation: fadeIn 0.25s ease; } .tab-content.active { display: flex; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* HERO KART */
-        .hero-card {
-            background: var(--card-bg); border: 1px solid var(--card-border);
-            border-radius: 24px; padding: 22px 18px;
-            display: flex; flex-direction: column; align-items: center; gap: 18px;
-        }
-        .power-btn-outer {
-            width: 135px; height: 135px; border-radius: 50%; background: #08080a;
-            display: flex; justify-content: center; align-items: center; cursor: pointer;
-            border: 3px solid #242426; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .power-btn-outer.active { border-color: var(--accent-glow); box-shadow: 0 0 35px rgba(255, 174, 0, 0.35), inset 0 0 15px rgba(255, 174, 0, 0.2); }
-        .power-icon { font-size: 44px; color: #3a3a3c; transition: color 0.4s ease; }
-        .power-btn-outer.active .power-icon { color: var(--accent-glow); text-shadow: 0 0 15px var(--accent-glow); }
-        .power-status-text { font-size: 13px; font-weight: 600; letter-spacing: 0.8px; color: var(--text-sec); }
-        .power-btn-outer.active + .power-status-text { color: var(--text-main); }
-
-        /* Sürgüler & Presets */
-        .slider-container { width: 100%; display: flex; flex-direction: column; gap: 6px; }
-        .slider-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-sec); font-weight: 500; }
-        input[type=range] { -webkit-appearance: none; width: 100%; height: 6px; background: #242426; border-radius: 5px; outline: none; }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #ffffff;
-            cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.5); transition: transform 0.1s;
-        }
-        input[type=range]:active::-webkit-slider-thumb { transform: scale(1.25); background: var(--accent-glow); box-shadow: 0 0 15px var(--accent-glow); }
-
-        .presets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
-        .preset-btn {
-            background: #08080a; border: 1px solid var(--card-border); color: var(--text-main);
-            padding: 12px 4px; border-radius: 14px; font-size: 11px; font-weight: 600; cursor: pointer;
-            display: flex; flex-direction: column; align-items: center; gap: 5px; transition: all 0.2s;
-        }
-        .preset-btn:active { border-color: var(--accent-glow); background: var(--accent-soft); }
-        .preset-btn span { font-size: 16px; }
-
-        /* Standart Kartlar & Uyku Çemberi */
-        .info-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-        .card-header { font-size: 11px; color: var(--text-sec); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-
-        .sleep-circle-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 20px 16px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
-        .sleep-times-header { display: flex; justify-content: space-between; width: 100%; padding: 0 10px; }
-        .time-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-        .time-col span { font-size: 11px; color: var(--text-sec); font-weight: 600; display: flex; align-items: center; gap: 4px; }
-        .time-col h2 { font-size: 20px; font-weight: 700; }
         
-        .circle-container { position: relative; width: 180px; height: 180px; display: flex; justify-content: center; align-items: center; }
-        .circle-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-        .circle-bg { fill: none; stroke: #242426; stroke-width: 14; }
-        .circle-progress { fill: none; stroke: var(--accent-glow); stroke-width: 14; stroke-linecap: round; transition: stroke-dasharray 0.8s ease; }
-        .circle-center-content { position: absolute; display: flex; flex-direction: column; align-items: center; text-align: center; }
-        .circle-inner-text { font-size: 18px; font-weight: 700; color: var(--text-main); }
-        .circle-inner-sub { font-size: 10px; color: var(--text-sec); margin-top: 2px; }
-
-        .alarm-options { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-        .alarm-opt-card {
-            background: #08080a; border: 1px solid var(--card-border); border-radius: 14px; padding: 12px;
-            display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: 0.2s;
-        }
-        .alarm-opt-card.selected { border-color: var(--accent-glow); background: rgba(255, 174, 0, 0.08); }
-        .alarm-opt-text h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-        .alarm-opt-text p { font-size: 11px; color: var(--text-sec); }
-        .check-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--text-sec); display: flex; align-items: center; justify-content: center; }
-        .alarm-opt-card.selected .check-circle { border-color: var(--accent-glow); background: var(--accent-glow); }
-        .alarm-opt-card.selected .check-circle::after { content: "✓"; font-size: 11px; color: #000; font-weight: bold; }
-
-        /* Otomasyon Listesi & Switch */
-        .automation-list { display: flex; flex-direction: column; gap: 10px; }
-        .shortcut-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 14px; display: flex; align-items: center; justify-content: space-between; }
-        .shortcut-left { display: flex; align-items: center; gap: 12px; }
-        .shortcut-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; flex-shrink: 0; }
-        .icon-blue { background-color: var(--ios-blue); } .icon-orange { background-color: var(--ios-orange); } .icon-purple { background-color: var(--ios-purple); }
-        .shortcut-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; } .shortcut-info p { font-size: 11px; color: var(--text-sec); }
-
-        .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #39393d; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 24px; }
-        .slider-switch:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        input:checked + .slider-switch { background-color: var(--ios-green); }
-        input:checked + .slider-switch:before { transform: translateX(18px); }
-
-        /* Floating Nav Bar */
-        .floating-nav-wrapper { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 350px; z-index: 1000; }
-        .floating-nav { background: rgba(28, 28, 32, 0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 32px; padding: 6px 12px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text-sec); font-size: 10px; font-weight: 500; cursor: pointer; padding: 6px 14px; border-radius: 20px; transition: all 0.2s; }
-        .nav-item.active { color: var(--accent-glow); background: rgba(255, 174, 0, 0.12); font-weight: 600; }
-        .nav-item svg { width: 20px; height: 20px; fill: currentColor; }
+        .hero-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 22px 18px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+        .power-btn-outer { width: 135px; height: 135px; border-radius: 50%; background: #08080a; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 3px solid #242426; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .power-btn-outer.active { border-color: var(--accent-glow); box-shadow: 0 0 35px rgba(255, 174, 0, 0.35), inset 0 0 15px rgba(255, 174, 0, 0.2); }
+        .power-icon { font-size: 44px; color: #3a3a3c; transition: color 0.4s ease; } .power-btn-outer.active .power-icon { color: var(--accent-glow); text-shadow: 0 0 15px var(--accent-glow); }
+        .power-status-text { font-size: 13px; font-weight: 600; letter-spacing: 0.8px; color: var(--text-sec); } .power-btn-outer.active + .power-status-text { color: var(--text-main); }
+        
+        .slider-container { width: 100%; display: flex; flex-direction: column; gap: 6px; } .slider-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-sec); font-weight: 500; }
+        input[type=range] { -webkit-appearance: none; width: 100%; height: 6px; background: #242426; border-radius: 5px; outline: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #ffffff; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.5); transition: transform 0.1s; }
+        input[type=range]:active::-webkit-slider-thumb { transform: scale(1.25); background: var(--accent-glow); box-shadow: 0 0 15px var(--accent-glow); }
+        
+        .presets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+        .preset-btn { background: #08080a; border: 1px solid var(--card-border); color: var(--text-main); padding: 12px 4px; border-radius: 14px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: all 0.2s; }
+        .preset-btn:active { border-color: var(--accent-glow); background: var(--accent-soft); } .preset-btn span { font-size: 16px; }
+        
+        .info-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 10px; } .card-header { font-size: 11px; color: var(--text-sec); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sleep-circle-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 20px 16px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+        .sleep-times-header { display: flex; justify-content: space-between; width: 100%; padding: 0 10px; } .time-col { display: flex; flex-direction: column; align-items: center; gap: 2px; } .time-col span { font-size: 11px; color: var(--text-sec); font-weight: 600; display: flex; align-items: center; gap: 4px; } .time-col h2 { font-size: 20px; font-weight: 700; }
+        .circle-container { position: relative; width: 180px; height: 180px; display: flex; justify-content: center; align-items: center; } .circle-svg { width: 100%; height: 100%; transform: rotate(-90deg); } .circle-bg { fill: none; stroke: #242426; stroke-width: 14; } .circle-progress { fill: none; stroke: var(--accent-glow); stroke-width: 14; stroke-linecap: round; transition: stroke-dasharray 0.8s ease; } .circle-center-content { position: absolute; display: flex; flex-direction: column; align-items: center; text-align: center; } .circle-inner-text { font-size: 18px; font-weight: 700; color: var(--text-main); } .circle-inner-sub { font-size: 10px; color: var(--text-sec); margin-top: 2px; }
+        
+        .alarm-options { display: flex; flex-direction: column; gap: 8px; width: 100%; } .alarm-opt-card { background: #08080a; border: 1px solid var(--card-border); border-radius: 14px; padding: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: 0.2s; } .alarm-opt-card.selected { border-color: var(--accent-glow); background: rgba(255, 174, 0, 0.08); } .alarm-opt-text h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; } .alarm-opt-text p { font-size: 11px; color: var(--text-sec); } .check-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--text-sec); display: flex; align-items: center; justify-content: center; } .alarm-opt-card.selected .check-circle { border-color: var(--accent-glow); background: var(--accent-glow); } .alarm-opt-card.selected .check-circle::after { content: "✓"; font-size: 11px; color: #000; font-weight: bold; }
+        
+        .automation-list { display: flex; flex-direction: column; gap: 10px; } .shortcut-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 14px; display: flex; align-items: center; justify-content: space-between; } .shortcut-left { display: flex; align-items: center; gap: 12px; } .shortcut-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; flex-shrink: 0; } .icon-blue { background-color: var(--ios-blue); } .icon-orange { background-color: var(--ios-orange); } .icon-purple { background-color: var(--ios-purple); } .shortcut-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; } .shortcut-info p { font-size: 11px; color: var(--text-sec); }
+        
+        .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; } .switch input { opacity: 0; width: 0; height: 0; } .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #39393d; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 24px; } .slider-switch:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); } input:checked + .slider-switch { background-color: var(--ios-green); } input:checked + .slider-switch:before { transform: translateX(18px); }
+        
+        .floating-nav-wrapper { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 350px; z-index: 1000; } .floating-nav { background: rgba(28, 28, 32, 0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 32px; padding: 6px 12px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7); } .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text-sec); font-size: 10px; font-weight: 500; cursor: pointer; padding: 6px 14px; border-radius: 20px; transition: all 0.2s; } .nav-item.active { color: var(--accent-glow); background: rgba(255, 174, 0, 0.12); font-weight: 600; } .nav-item svg { width: 20px; height: 20px; fill: currentColor; }
     </style>
 </head>
 <body>
 
 <div id="pin-overlay">
-    <div class="pin-header">
-        <h2>LED Control</h2>
-        <p id="pin-mesaj">Güvenlik şifresini girin</p>
-    </div>
-    
-    <div class="pin-dots">
-        <div class="dot" id="dot-0"></div><div class="dot" id="dot-1"></div><div class="dot" id="dot-2"></div><div class="dot" id="dot-3"></div>
-    </div>
-
+    <div class="pin-header"><h2>LED Control</h2><p id="pin-mesaj">Güvenlik şifresini girin</p></div>
+    <div class="pin-dots"><div class="dot" id="dot-0"></div><div class="dot" id="dot-1"></div><div class="dot" id="dot-2"></div><div class="dot" id="dot-3"></div></div>
     <div class="keypad">
         <div class="key-btn" onclick="tusBas(1)">1<span></span></div><div class="key-btn" onclick="tusBas(2)">2<span>ABC</span></div><div class="key-btn" onclick="tusBas(3)">3<span>DEF</span></div>
         <div class="key-btn" onclick="tusBas(4)">4<span>GHI</span></div><div class="key-btn" onclick="tusBas(5)">5<span>JKL</span></div><div class="key-btn" onclick="tusBas(6)">6<span>MNO</span></div>
@@ -203,23 +81,24 @@
         <div class="key-btn empty"></div><div class="key-btn" onclick="tusBas(0)">0<span></span></div><div class="key-btn" onclick="tusSil()" style="font-size: 20px;">⌫<span>SİL</span></div>
     </div>
 </div>
+
 <div class="app-container">
     <header class="header">
         <h1>LED Control</h1>
         <div class="header-right">
             <div class="status-badge" id="baglantiDurumu">Çevrimiçi</div>
             <div class="settings-icon" onclick="kilidiKapat()" title="Kilitle">🔒</div>
-            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v2.2 Kilitli')">⚙️</div>
+            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v2.3 Bug-Free')">⚙️</div>
         </div>
     </header>
 
     <div id="tab-anasayfa" class="tab-content active">
         <div class="hero-card">
-            <div class="power-btn-outer active" id="gucButonu" onclick="gucKapatAc()"><div class="power-icon">⏻</div></div>
-            <div class="power-status-text" id="durumMetni">LED'LER AÇIK (%65)</div>
+            <div class="power-btn-outer" id="gucButonu" onclick="gucKapatAc()"><div class="power-icon">⏻</div></div>
+            <div class="power-status-text" id="durumMetni">YÜKLENİYOR...</div>
             <div class="slider-container">
-                <div class="slider-label"><span>Parlaklık</span><span id="parlaklikYuzde">%65</span></div>
-                <input type="range" id="parlaklikSurgusu" min="1" max="100" value="65" oninput="parlaklikDegisti(this.value)">
+                <div class="slider-label"><span>Parlaklık</span><span id="parlaklikYuzde">%0</span></div>
+                <input type="range" id="parlaklikSurgusu" min="1" max="100" value="0" oninput="parlaklikDegisti(this.value)">
             </div>
             <div class="presets-grid">
                 <button class="preset-btn" onclick="modUygula(15, 'Gece Loş Modu')"><span>🌙</span>Loş Gece</button>
@@ -227,7 +106,6 @@
                 <button class="preset-btn" onclick="modUygula(100, 'Maksimum Güç')"><span>☀️</span>Tam Güç</button>
             </div>
         </div>
-
         <div class="info-card">
             <div class="card-header">🎚️ GEÇİŞ YUMUŞAKLIĞI (FADE HIZI)</div>
             <div class="slider-container" style="margin-top: 2px;">
@@ -280,104 +158,89 @@
 
 <script>
     // ----------------------------------------------------
-    // 1. PIN KİLİT EKRANI MANTIĞI (PASSCODE ENGINE)
+    // 1. PIN KİLİT EKRANI MANTIĞI
     // ----------------------------------------------------
-    const DOGRU_PIN = "1905"; // <-- ŞİFRENİ BURADAN DEĞİŞTİREBİLİRSİN!
-    let girilenPin = "";
-
-    // Açılışta hafızada kilit açık mı kontrol et
-    if (localStorage.getItem("pin_auth") === "true") {
-        document.getElementById("pin-overlay").classList.add("hidden");
-    }
-
+    const DOGRU_PIN = "1905"; let girilenPin = "";
+    if (localStorage.getItem("pin_auth") === "true") { document.getElementById("pin-overlay").classList.add("hidden"); }
     function tusBas(rakam) {
-        if (girilenPin.length < 4) {
-            girilenPin += rakam;
-            document.getElementById("dot-" + (girilenPin.length - 1)).classList.add("filled");
-        }
-        
+        if (girilenPin.length < 4) { girilenPin += rakam; document.getElementById("dot-" + (girilenPin.length - 1)).classList.add("filled"); }
         if (girilenPin.length === 4) {
             setTimeout(() => {
                 if (girilenPin === DOGRU_PIN) {
-                    // Şifre Doğru: Kilidi aç ve hafızaya kaydet
-                    document.getElementById("pin-overlay").classList.add("hidden");
-                    localStorage.setItem("pin_auth", "true");
-                    girilenPin = "";
-                    noktalariSifirla();
+                    document.getElementById("pin-overlay").classList.add("hidden"); localStorage.setItem("pin_auth", "true"); girilenPin = ""; noktalariSifirla();
                 } else {
-                    // Şifre Yanlış: Titret ve kırmızı yap
-                    document.querySelectorAll(".dot").forEach(el => el.classList.add("error"));
-                    document.getElementById("pin-mesaj").textContent = "Yanlış Şifre! Tekrar deneyin.";
-                    document.getElementById("pin-mesaj").style.color = "#ff3b30";
-                    setTimeout(() => {
-                        girilenPin = "";
-                        noktalariSifirla();
-                        document.getElementById("pin-mesaj").textContent = "Güvenlik şifresini girin";
-                        document.getElementById("pin-mesaj").style.color = "var(--text-sec)";
-                    }, 600);
+                    document.querySelectorAll(".dot").forEach(el => el.classList.add("error")); document.getElementById("pin-mesaj").textContent = "Yanlış Şifre!"; document.getElementById("pin-mesaj").style.color = "#ff3b30";
+                    setTimeout(() => { girilenPin = ""; noktalariSifirla(); document.getElementById("pin-mesaj").textContent = "Güvenlik şifresini girin"; document.getElementById("pin-mesaj").style.color = "var(--text-sec)"; }, 600);
                 }
             }, 150);
         }
     }
+    function tusSil() { if (girilenPin.length > 0) { girilenPin = girilenPin.slice(0, -1); document.getElementById("dot-" + girilenPin.length).classList.remove("filled"); } }
+    function noktalariSifirla() { document.querySelectorAll(".dot").forEach(el => { el.classList.remove("filled"); el.classList.remove("error"); }); }
+    function kilidiKapat() { localStorage.removeItem("pin_auth"); document.getElementById("pin-overlay").classList.remove("hidden"); }
 
-    function tusSil() {
-        if (girilenPin.length > 0) {
-            girilenPin = girilenPin.slice(0, -1);
-            document.getElementById("dot-" + girilenPin.length).classList.remove("filled");
-        }
-    }
-
-    function noktalariSifirla() {
-        document.querySelectorAll(".dot").forEach(el => {
-            el.classList.remove("filled");
-            el.classList.remove("error");
-        });
-    }
-
-    function kilidiKapat() {
-        localStorage.removeItem("pin_auth");
-        document.getElementById("pin-overlay").classList.remove("hidden");
-        alert("🔒 Uygulama Kilitlendi!");
-    }
     // ----------------------------------------------------
-
-    // 2. FIREBASE BULUT AYARLARI
-    const firebaseConfig = {
-        apiKey: "AIzaSyBEhsUAqN4L-ATvLFCjLkBvTaAAXdvF8qM",
-        databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "led-control-79bc3"
-    };
+    // 2. FIREBASE VE AKILLI HAFIZA (MEMORY CORE)
+    // ----------------------------------------------------
+    const firebaseConfig = { apiKey: "AIzaSyBEhsUAqN4L-ATvLFCjLkBvTaAAXdvF8qM", databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", projectId: "led-control-79bc3" };
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
 
-    // 3. SEKME & ETKİLEŞİM MANTIĞI
     function sekmeDegistir(sekmeAdi, element) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        document.getElementById('tab-' + sekmeAdi).classList.add('active');
-        element.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + sekmeAdi).classList.add('active'); element.classList.add('active');
     }
 
-    let ledAcikMi = true; let sonKaydedilenParlaklik = 65;
+    // YENİ: Çift katmanlı hafızadan son parlaklığı çek (Varsayılan 65)
+    let ledAcikMi = false; 
+    let sonKaydedilenParlaklik = parseInt(localStorage.getItem("son_parlaklik")) || 65;
+
+    // Buluttaki son parlaklığı dinle (Başka cihazda değişirse burası da öğrensin)
+    db.ref('/sonParlaklik').on('value', (snap) => {
+        if (snap.val() && snap.val() > 0) {
+            sonKaydedilenParlaklik = snap.val();
+            localStorage.setItem("son_parlaklik", sonKaydedilenParlaklik);
+        }
+    });
+
     function gucKapatAc() {
         const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
         const surgusu = document.getElementById('parlaklikSurgusu'); const yuzdeMetin = document.getElementById('parlaklikYuzde');
         ledAcikMi = !ledAcikMi;
+        
         if (ledAcikMi) {
-            btn.classList.add('active'); surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik;
-            metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; db.ref('/durum').set("ACIK"); db.ref('/parlaklik').set(parseInt(sonKaydedilenParlaklik));
+            // AÇILIRKEN: Hafızadaki gerçek son parlaklık neyse oradan uyan! (BUG 2 ÇÖZÜMÜ)
+            btn.classList.add('active'); 
+            surgusu.value = sonKaydedilenParlaklik; 
+            yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik;
+            metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
+            db.ref('/durum').set("ACIK"); 
+            db.ref('/parlaklik').set(parseInt(sonKaydedilenParlaklik));
         } else {
-            sonKaydedilenParlaklik = surgusu.value > 0 ? surgusu.value : sonKaydedilenParlaklik; btn.classList.remove('active');
-            surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)"; db.ref('/durum').set("KAPALI"); db.ref('/parlaklik').set(0);
+            // KAPANIRKEN: O anki seviyeyi kalıcı hafızaya kazı!
+            if (surgusu.value > 0) {
+                sonKaydedilenParlaklik = surgusu.value;
+                localStorage.setItem("son_parlaklik", sonKaydedilenParlaklik);
+                db.ref('/sonParlaklik').set(parseInt(sonKaydedilenParlaklik));
+            }
+            btn.classList.remove('active'); surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)";
+            db.ref('/durum').set("KAPALI"); db.ref('/parlaklik').set(0);
         }
     }
+
     function parlaklikDegisti(deger) {
-        document.getElementById('parlaklikYuzde').textContent = "%" + deger; if (deger > 0) sonKaydedilenParlaklik = deger;
+        document.getElementById('parlaklikYuzde').textContent = "%" + deger; 
+        if (deger > 0) {
+            sonKaydedilenParlaklik = deger;
+            localStorage.setItem("son_parlaklik", deger);
+            db.ref('/sonParlaklik').set(parseInt(deger));
+        }
         if (!ledAcikMi && deger > 0) { ledAcikMi = true; document.getElementById('gucButonu').classList.add('active'); }
         else if (deger == 0) { ledAcikMi = false; document.getElementById('gucButonu').classList.remove('active'); }
         document.getElementById('durumMetni').textContent = ledAcikMi ? "LED'LER AÇIK (%" + deger + ")" : "LED'LER KAPALI (%0)";
         db.ref('/durum').set(ledAcikMi ? "ACIK" : "KAPALI"); db.ref('/parlaklik').set(parseInt(deger));
     }
+
     function modUygula(yuzde, modAdi) { document.getElementById('parlaklikSurgusu').value = yuzde; parlaklikDegisti(yuzde); }
     function fadeDegisti(deger) {
         const metin = deger <= 3 ? "Sinematik (" + deger + " ms)" : (deger <= 6 ? "Normal (" + deger + " ms)" : "Anlık / Keskin");
@@ -389,7 +252,7 @@
     }
     function otomasyonKaydet(anahtar, durum) { db.ref('/otomasyonlar/' + anahtar).set(durum); }
 
-    // 4. DİNAMİK UYKU SÜRESİ HESAPLAMA MOTORU
+    // DİNAMİK UYKU SÜRESİ HESAPLAMA MOTORU
     function uykuCemberiniGuncelle(yatma, uyanma) {
         document.getElementById('yatmaSaati').textContent = yatma; document.getElementById('uyanmaSaati').textContent = uyanma;
         let [ySaat, yDak] = yatma.split(':').map(Number); let [uSaat, uDak] = uyanma.split(':').map(Number);
@@ -401,12 +264,35 @@
     }
     uykuCemberiniGuncelle("00:20", "09:00");
 
-    // 5. BULUTTAN ANLIK VERİ OKUMA
+    // BULUTTAN ANLIK VERİ OKUMA VE UI GÜNCELLEME (BUG 1 ÇÖZÜMÜ)
     db.ref('/durum').on('value', (snap) => {
-        if (snap.val() === "ACIK" && !ledAcikMi) { ledAcikMi = true; document.getElementById('gucButonu').classList.add('active'); document.getElementById('parlaklikSurgusu').value = sonKaydedilenParlaklik; document.getElementById('parlaklikYuzde').textContent = "%" + sonKaydedilenParlaklik; document.getElementById('durumMetni').textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; }
-        else if (snap.val() === "KAPALI" && ledAcikMi) { ledAcikMi = false; document.getElementById('gucButonu').classList.remove('active'); document.getElementById('parlaklikSurgusu').value = 0; document.getElementById('parlaklikYuzde').textContent = "%0"; document.getElementById('durumMetni').textContent = "LED'LER KAPALI (%0)"; }
+        const veri = snap.val();
+        const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
+        const surgusu = document.getElementById('parlaklikSurgusu'); const yuzdeMetin = document.getElementById('parlaklikYuzde');
+        
+        if (veri === "ACIK") { 
+            ledAcikMi = true; btn.classList.add('active'); 
+            surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik; 
+            metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
+        } else if (veri === "KAPALI") { 
+            ledAcikMi = false; btn.classList.remove('active'); 
+            surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)"; 
+        }
     });
-    db.ref('/parlaklik').on('value', (snap) => { if (snap.val() !== null) { document.getElementById('parlaklikSurgusu').value = snap.val(); document.getElementById('parlaklikYuzde').textContent = "%" + snap.val(); } });
+
+    db.ref('/parlaklik').on('value', (snap) => { 
+        const veri = snap.val();
+        if (veri !== null && veri > 0) { 
+            sonKaydedilenParlaklik = veri;
+            localStorage.setItem("son_parlaklik", veri);
+            if (ledAcikMi) {
+                document.getElementById('parlaklikSurgusu').value = veri; 
+                document.getElementById('parlaklikYuzde').textContent = "%" + veri; 
+                document.getElementById('durumMetni').textContent = "LED'LER AÇIK (%" + veri + ")";
+            }
+        } 
+    });
+
     db.ref('/uykuPlani').on('value', (snap) => { const veri = snap.val(); if (veri && veri.yatma && veri.uyanma) { uykuCemberiniGuncelle(veri.yatma, veri.uyanma); } });
 </script>
 </body>
