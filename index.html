@@ -204,7 +204,8 @@
             btn.classList.add('active'); 
             surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik;
             metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
-            db.ref('/durum').set("ACIK"); db.ref('/parlaklik').set(parseInt(sonKaydedilenParlaklik));
+            db.ref('/durum').set("ACIK"); 
+            db.ref('/parlaklik').set(parseInt(sonKaydedilenParlaklik)); // Açıldığında hafızayı yolla
         } else {
             if (surgusu.value > 0) {
                 sonKaydedilenParlaklik = surgusu.value;
@@ -212,7 +213,9 @@
                 db.ref('/sonParlaklik').set(parseInt(sonKaydedilenParlaklik));
             }
             btn.classList.remove('active'); surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)";
-            db.ref('/durum').set("KAPALI"); db.ref('/parlaklik').set(0);
+            
+            // KÖK ÇÖZÜM BURADA: Sadece Durumu KAPALI yapıyoruz. Parlaklığı 0'lamıyoruz!
+            db.ref('/durum').set("KAPALI"); 
         }
     }
 
