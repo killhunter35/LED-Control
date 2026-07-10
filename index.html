@@ -297,17 +297,6 @@
     });
 
     db.ref('/uykuPlani').on('value', (snap) => { const veri = snap.val(); if (veri && veri.yatma && veri.uyanma) { uykuCemberiniGuncelle(veri.yatma, veri.uyanma); } });
-
-    // FADE HIZI İÇİN BULUT HAFIZASI (MEMORY CORE)
-    db.ref('/fadeHizi').on('value', (snap) => {
-        const veri = snap.val();
-        if (veri !== null) {
-            document.getElementById('fadeSurgusu').value = veri;
-            const metin = veri <= 3 ? "Anlık / Keskin (" + veri + ")" : (veri <= 6 ? "Normal (" + veri + ")" : "Sinematik (" + veri + ")");
-            document.getElementById('fadeMetin').textContent = metin;
-        }
-    });
-    
 </script>
 </body>
 </html>
