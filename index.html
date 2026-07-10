@@ -88,7 +88,7 @@
         <div class="header-right">
             <div class="status-badge" id="baglantiDurumu">Çevrimiçi</div>
             <div class="settings-icon" onclick="kilidiKapat()" title="Kilitle">🔒</div>
-            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v2.3 Bug-Free')">⚙️</div>
+            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v3.0 Kusursuz Fade')">⚙️</div>
         </div>
     </header>
 
@@ -109,7 +109,7 @@
         <div class="info-card">
             <div class="card-header">🎚️ GEÇİŞ YUMUŞAKLIĞI (FADE HIZI)</div>
             <div class="slider-container" style="margin-top: 2px;">
-                <div class="slider-label"><span>Tepki Süresi</span><span id="fadeMetin">Anlık / Keskin (3 ms)</span></div>
+                <div class="slider-label"><span>Tepki Süresi</span><span id="fadeMetin">Anlık / Keskin (3)</span></div>
                 <input type="range" id="fadeSurgusu" min="1" max="10" value="3" oninput="fadeDegisti(this.value)">
             </div>
         </div>
@@ -157,9 +157,6 @@
 </div>
 
 <script>
-    // ----------------------------------------------------
-    // 1. PIN KİLİT EKRANI MANTIĞI
-    // ----------------------------------------------------
     const DOGRU_PIN = "1905"; let girilenPin = "";
     if (localStorage.getItem("pin_auth") === "true") { document.getElementById("pin-overlay").classList.add("hidden"); }
     function tusBas(rakam) {
@@ -179,9 +176,6 @@
     function noktalariSifirla() { document.querySelectorAll(".dot").forEach(el => { el.classList.remove("filled"); el.classList.remove("error"); }); }
     function kilidiKapat() { localStorage.removeItem("pin_auth"); document.getElementById("pin-overlay").classList.remove("hidden"); }
 
-    // ----------------------------------------------------
-    // 2. FIREBASE VE AKILLI HAFIZA (MEMORY CORE)
-    // ----------------------------------------------------
     const firebaseConfig = { apiKey: "AIzaSyBEhsUAqN4L-ATvLFCjLkBvTaAAXdvF8qM", databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", projectId: "led-control-79bc3" };
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
@@ -191,11 +185,9 @@
         document.getElementById('tab-' + sekmeAdi).classList.add('active'); element.classList.add('active');
     }
 
-    // YENİ: Çift katmanlı hafızadan son parlaklığı çek (Varsayılan 65)
     let ledAcikMi = false; 
     let sonKaydedilenParlaklik = parseInt(localStorage.getItem("son_parlaklik")) || 65;
 
-    // Buluttaki son parlaklığı dinle (Başka cihazda değişirse burası da öğrensin)
     db.ref('/sonParlaklik').on('value', (snap) => {
         if (snap.val() && snap.val() > 0) {
             sonKaydedilenParlaklik = snap.val();
@@ -209,15 +201,11 @@
         ledAcikMi = !ledAcikMi;
         
         if (ledAcikMi) {
-            // AÇILIRKEN: Hafızadaki gerçek son parlaklık neyse oradan uyan! (BUG 2 ÇÖZÜMÜ)
             btn.classList.add('active'); 
-            surgusu.value = sonKaydedilenParlaklik; 
-            yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik;
+            surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik;
             metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
-            db.ref('/durum').set("ACIK"); 
-            db.ref('/parlaklik').set(parseInt(sonKaydedilenParlaklik));
+            db.ref('/durum').set("ACIK"); db.ref('/parlaklik').set(parseInt(sonKaydedilenParlaklik));
         } else {
-            // KAPANIRKEN: O anki seviyeyi kalıcı hafızaya kazı!
             if (surgusu.value > 0) {
                 sonKaydedilenParlaklik = surgusu.value;
                 localStorage.setItem("son_parlaklik", sonKaydedilenParlaklik);
@@ -231,9 +219,7 @@
     function parlaklikDegisti(deger) {
         document.getElementById('parlaklikYuzde').textContent = "%" + deger; 
         if (deger > 0) {
-            sonKaydedilenParlaklik = deger;
-            localStorage.setItem("son_parlaklik", deger);
-            db.ref('/sonParlaklik').set(parseInt(deger));
+            sonKaydedilenParlaklik = deger; localStorage.setItem("son_parlaklik", deger); db.ref('/sonParlaklik').set(parseInt(deger));
         }
         if (!ledAcikMi && deger > 0) { ledAcikMi = true; document.getElementById('gucButonu').classList.add('active'); }
         else if (deger == 0) { ledAcikMi = false; document.getElementById('gucButonu').classList.remove('active'); }
@@ -244,10 +230,19 @@
     function modUygula(yuzde, modAdi) { document.getElementById('parlaklikSurgusu').value = yuzde; parlaklikDegisti(yuzde); }
     
     function fadeDegisti(deger) {
-        // MANTIK DÜZELTİLDİ: Düşük ms = Çok Hızlı (Anlık), Yüksek ms = Çok Yavaş (Sinematik)
-        const metin = deger <= 3 ? "Anlık / Keskin (" + deger + " ms)" : (deger <= 6 ? "Normal (" + deger + " ms)" : "Sinematik (" + deger + " ms)");
+        const metin = deger <= 3 ? "Anlık / Keskin (" + deger + ")" : (deger <= 6 ? "Normal (" + deger + ")" : "Sinematik (" + deger + ")");
         document.getElementById('fadeMetin').textContent = metin; db.ref('/fadeHizi').set(parseInt(deger));
     }
+
+    // FADE BARI BULUT HAFIZASI
+    db.ref('/fadeHizi').on('value', (snap) => {
+        const veri = snap.val();
+        if (veri !== null) {
+            document.getElementById('fadeSurgusu').value = veri;
+            const metin = veri <= 3 ? "Anlık / Keskin (" + veri + ")" : (veri <= 6 ? "Normal (" + veri + ")" : "Sinematik (" + veri + ")");
+            document.getElementById('fadeMetin').textContent = metin;
+        }
+    });
     
     function alarmSecim(secenekNo) {
         document.querySelectorAll('.alarm-opt-card').forEach(el => el.classList.remove('selected'));
@@ -255,7 +250,6 @@
     }
     function otomasyonKaydet(anahtar, durum) { db.ref('/otomasyonlar/' + anahtar).set(durum); }
 
-    // DİNAMİK UYKU SÜRESİ HESAPLAMA MOTORU
     function uykuCemberiniGuncelle(yatma, uyanma) {
         document.getElementById('yatmaSaati').textContent = yatma; document.getElementById('uyanmaSaati').textContent = uyanma;
         let [ySaat, yDak] = yatma.split(':').map(Number); let [uSaat, uDak] = uyanma.split(':').map(Number);
@@ -267,7 +261,6 @@
     }
     uykuCemberiniGuncelle("00:20", "09:00");
 
-    // BULUTTAN ANLIK VERİ OKUMA VE UI GÜNCELLEME (BUG 1 ÇÖZÜMÜ)
     db.ref('/durum').on('value', (snap) => {
         const veri = snap.val();
         const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
@@ -286,8 +279,7 @@
     db.ref('/parlaklik').on('value', (snap) => { 
         const veri = snap.val();
         if (veri !== null && veri > 0) { 
-            sonKaydedilenParlaklik = veri;
-            localStorage.setItem("son_parlaklik", veri);
+            sonKaydedilenParlaklik = veri; localStorage.setItem("son_parlaklik", veri);
             if (ledAcikMi) {
                 document.getElementById('parlaklikSurgusu').value = veri; 
                 document.getElementById('parlaklikYuzde').textContent = "%" + veri; 
@@ -295,7 +287,6 @@
             }
         } 
     });
-
     db.ref('/uykuPlani').on('value', (snap) => { const veri = snap.val(); if (veri && veri.yatma && veri.uyanma) { uykuCemberiniGuncelle(veri.yatma, veri.uyanma); } });
 </script>
 </body>
