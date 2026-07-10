@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LED Control</title>
     
+    <!-- iOS PWA Ayarları -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="LED Control">
     
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -66,7 +68,14 @@
         
         .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; } .switch input { opacity: 0; width: 0; height: 0; } .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #39393d; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 24px; } .slider-switch:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); } input:checked + .slider-switch { background-color: var(--ios-green); } input:checked + .slider-switch:before { transform: translateX(18px); }
         
-        .floating-nav-wrapper { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 350px; z-index: 1000; } .floating-nav { background: rgba(28, 28, 32, 0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 32px; padding: 6px 12px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7); } .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text-sec); font-size: 10px; font-weight: 500; cursor: pointer; padding: 6px 14px; border-radius: 20px; transition: all 0.2s; } .nav-item.active { color: var(--accent-glow); background: rgba(255, 174, 0, 0.12); font-weight: 600; } .nav-item svg { width: 20px; height: 20px; fill: currentColor; }
+        /* YENİ ALT NAVİGASYON VE ENDÜSTRİYEL İKON TASARIMLARI */
+        .floating-nav-wrapper { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 360px; z-index: 1000; }
+        .floating-nav { background: rgba(26, 26, 30, 0.85); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 35px; padding: 6px 15px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--text-sec); font-size: 10px; font-weight: 500; cursor: pointer; padding: 6px 14px; border-radius: 22px; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+        .nav-item.active { color: var(--accent-glow); background: rgba(255, 174, 0, 0.12); font-weight: 600; transform: translateY(-2px); }
+        .nav-icon { width: 24px; height: 24px; stroke: currentColor; fill: none; transition: all 0.25s; }
+        .nav-item.active .icon-accent { fill: var(--accent-glow); stroke: var(--accent-glow); }
+        .nav-item.active .icon-accent-text { fill: var(--accent-glow); }
     </style>
 </head>
 <body>
@@ -88,7 +97,7 @@
         <div class="header-right">
             <div class="status-badge" id="baglantiDurumu">Çevrimiçi</div>
             <div class="settings-icon" onclick="kilidiKapat()" title="Kilitle">🔒</div>
-            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v3.0 Kusursuz Fade')">⚙️</div>
+            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v4.1 Smart Sync')">⚙️</div>
         </div>
     </header>
 
@@ -109,6 +118,7 @@
         <div class="info-card">
             <div class="card-header">🎚️ GEÇİŞ YUMUŞAKLIĞI (FADE HIZI)</div>
             <div class="slider-container" style="margin-top: 2px;">
+                <!-- DÜZELTME 1: Başlangıç Metni Düzeltildi -->
                 <div class="slider-label"><span>Tepki Süresi</span><span id="fadeMetin">Anlık / Keskin (3)</span></div>
                 <input type="range" id="fadeSurgusu" min="1" max="10" value="3" oninput="fadeDegisti(this.value)">
             </div>
@@ -148,15 +158,51 @@
     </div>
 </div>
 
+<!-- YENİ: ÖZEL ENDÜSTRİYEL İKONLARA SAHİP FLOATING NAV BAR -->
 <div class="floating-nav-wrapper">
     <nav class="floating-nav">
-        <div class="nav-item active" onclick="sekmeDegistir('anasayfa', this)"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>Ana Sayfa</span></div>
-        <div class="nav-item" onclick="sekmeDegistir('zamanlayici', this)"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 20 22 15.52 22 10h-2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8 8 3.58 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47 1.97 0 3.5-1.6 3.5-3.57V12c0-5.52-4.48-10-10.01-10zM12 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg><span>Zamanlayıcı</span></div>
-        <div class="nav-item" onclick="sekmeDegistir('otomasyon', this)"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg><span>Otomasyon</span></div>
+        <!-- 1. İkon: Açık Kapılı Ev -->
+        <div class="nav-item active" onclick="sekmeDegistir('anasayfa', this)">
+            <svg viewBox="0 0 24 24" class="nav-icon" stroke-width="1.8" stroke-linejoin="round">
+                <path d="M3 10L12 2l9 8v11a1 1 0 0 1-1 1h-6v-8h-4v8H4a1 1 0 0 1-1-1V10z" />
+                <path d="M10 13l4-1v9l-4-1v-7z" class="icon-accent" fill="currentColor" stroke="none"/>
+            </svg>
+            <span>Ana Sayfa</span>
+        </div>
+        
+        <!-- 2. İkon: Dijital Saat 0:00 -->
+        <div class="nav-item" onclick="sekmeDegistir('zamanlayici', this)">
+            <svg viewBox="0 0 24 24" class="nav-icon" stroke-width="1.8">
+                <rect x="3" y="6" width="18" height="13" rx="3" />
+                <path d="M8 3h8M7 19v2M17 19v2" stroke-linecap="round"/>
+                <text x="12" y="15" font-size="6.5" font-family="monospace" font-weight="bold" text-anchor="middle" class="icon-accent-text" fill="currentColor" stroke="none">0:00</text>
+            </svg>
+            <span>Zamanlayıcı</span>
+        </div>
+
+        <!-- 3. İkon: Robot Kolu & Konveyör Bandı -->
+        <div class="nav-item" onclick="sekmeDegistir('otomasyon', this)">
+            <svg viewBox="0 0 24 24" class="nav-icon" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Konveyör Bandı ve Çarkları -->
+                <rect x="2" y="18" width="20" height="4" rx="1.5" />
+                <circle cx="6" cy="20" r="0.8" fill="currentColor" stroke="none"/><circle cx="10" cy="20" r="0.8" fill="currentColor" stroke="none"/><circle cx="14" cy="20" r="0.8" fill="currentColor" stroke="none"/><circle cx="18" cy="20" r="0.8" fill="currentColor" stroke="none"/>
+                <!-- Robot Kolu Gözdesi -->
+                <path d="M6 18v-7l5-4h4" />
+                <circle cx="6" cy="14" r="1.5" class="icon-accent" fill="currentColor" stroke="none"/>
+                <circle cx="11" cy="7" r="1.5" class="icon-accent" fill="currentColor" stroke="none"/>
+                <!-- Kıskaç ve Taşıma Kutusu -->
+                <path d="M15 5v3.5m-1.5 0h3m-2.5 1.5v1.5m2-1.5v1.5" class="icon-accent" stroke-width="1.4"/>
+                <rect x="14" y="12" width="4" height="5" rx="0.5" />
+            </svg>
+            <span>Otomasyon</span>
+        </div>
     </nav>
 </div>
 
 <script>
+    // ----------------------------------------------------
+    // 1. PIN KİLİT EKRANI MANTIĞI
+    // ----------------------------------------------------
     const DOGRU_PIN = "1905"; let girilenPin = "";
     if (localStorage.getItem("pin_auth") === "true") { document.getElementById("pin-overlay").classList.add("hidden"); }
     function tusBas(rakam) {
@@ -176,6 +222,9 @@
     function noktalariSifirla() { document.querySelectorAll(".dot").forEach(el => { el.classList.remove("filled"); el.classList.remove("error"); }); }
     function kilidiKapat() { localStorage.removeItem("pin_auth"); document.getElementById("pin-overlay").classList.remove("hidden"); }
 
+    // ----------------------------------------------------
+    // 2. FIREBASE VE AKILLI HAFIZA (MEMORY CORE)
+    // ----------------------------------------------------
     const firebaseConfig = { apiKey: "AIzaSyBEhsUAqN4L-ATvLFCjLkBvTaAAXdvF8qM", databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", projectId: "led-control-79bc3" };
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
@@ -201,11 +250,9 @@
         ledAcikMi = !ledAcikMi;
         
         if (ledAcikMi) {
-            btn.classList.add('active'); 
-            surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik;
+            btn.classList.add('active'); surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik;
             metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
-            db.ref('/durum').set("ACIK"); 
-            db.ref('/parlaklik').set(parseInt(sonKaydedilenParlaklik)); // Açıldığında hafızayı yolla
+            db.ref('/durum').set("ACIK"); db.ref('/parlaklik').set(parseInt(sonKaydedilenParlaklik));
         } else {
             if (surgusu.value > 0) {
                 sonKaydedilenParlaklik = surgusu.value;
@@ -214,7 +261,7 @@
             }
             btn.classList.remove('active'); surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)";
             
-            // KÖK ÇÖZÜM BURADA: Sadece Durumu KAPALI yapıyoruz. Parlaklığı 0'lamıyoruz!
+            // DÜZELTME 2: Parlaklığı sıfırlama, sadece KAPALI komutu gönder.
             db.ref('/durum').set("KAPALI"); 
         }
     }
@@ -222,7 +269,9 @@
     function parlaklikDegisti(deger) {
         document.getElementById('parlaklikYuzde').textContent = "%" + deger; 
         if (deger > 0) {
-            sonKaydedilenParlaklik = deger; localStorage.setItem("son_parlaklik", deger); db.ref('/sonParlaklik').set(parseInt(deger));
+            sonKaydedilenParlaklik = deger;
+            localStorage.setItem("son_parlaklik", deger);
+            db.ref('/sonParlaklik').set(parseInt(deger));
         }
         if (!ledAcikMi && deger > 0) { ledAcikMi = true; document.getElementById('gucButonu').classList.add('active'); }
         else if (deger == 0) { ledAcikMi = false; document.getElementById('gucButonu').classList.remove('active'); }
@@ -232,12 +281,13 @@
 
     function modUygula(yuzde, modAdi) { document.getElementById('parlaklikSurgusu').value = yuzde; parlaklikDegisti(yuzde); }
     
+    // DÜZELTME 3: Fade Mantığı Tersine Çevrildi
     function fadeDegisti(deger) {
         const metin = deger <= 3 ? "Anlık / Keskin (" + deger + ")" : (deger <= 6 ? "Normal (" + deger + ")" : "Sinematik (" + deger + ")");
         document.getElementById('fadeMetin').textContent = metin; db.ref('/fadeHizi').set(parseInt(deger));
     }
-
-    // FADE BARI BULUT HAFIZASI
+    
+    // DÜZELTME 4: Fade Barı Bulut Hafızası Eklendi
     db.ref('/fadeHizi').on('value', (snap) => {
         const veri = snap.val();
         if (veri !== null) {
@@ -246,24 +296,46 @@
             document.getElementById('fadeMetin').textContent = metin;
         }
     });
-    
+
     function alarmSecim(secenekNo) {
         document.querySelectorAll('.alarm-opt-card').forEach(el => el.classList.remove('selected'));
         document.getElementById('opt-' + secenekNo).classList.add('selected'); db.ref('/otomasyonlar/alarmModu').set(secenekNo === 1 ? "FADE_IN" : "SMOOTH_BLINK");
     }
     function otomasyonKaydet(anahtar, durum) { db.ref('/otomasyonlar/' + anahtar).set(durum); }
 
+    // ----------------------------------------------------
+    // 3. YENİ: KURŞUN GEÇİRMEZ SAAT PARSER & ÇEMBER MOTORU
+    // ----------------------------------------------------
     function uykuCemberiniGuncelle(yatma, uyanma) {
-        document.getElementById('yatmaSaati').textContent = yatma; document.getElementById('uyanmaSaati').textContent = uyanma;
-        let [ySaat, yDak] = yatma.split(':').map(Number); let [uSaat, uDak] = uyanma.split(':').map(Number);
-        let yatmaDakika = ySaat * 60 + yDak; let uyanmaDakika = uSaat * 60 + uDak;
+        document.getElementById('yatmaSaati').textContent = yatma; 
+        document.getElementById('uyanmaSaati').textContent = uyanma;
+
+        // Hem İki Noktayı (:) Hem de Tek Noktayı (.) Algılayan Akıllı Parser
+        let [ySaat, yDak] = yatma.toString().split(/[:.]/).map(Number);
+        let [uSaat, uDak] = uyanma.toString().split(/[:.]/).map(Number);
+        
+        let yatmaDakika = (ySaat || 0) * 60 + (yDak || 0);
+        let uyanmaDakika = (uSaat || 0) * 60 + (uDak || 0);
+        
+        // 24 Saatlik Döngü (Gece yarısını geçme durumu)
         if (uyanmaDakika <= yatmaDakika) uyanmaDakika += 24 * 60;
+        
         let toplamFark = uyanmaDakika - yatmaDakika;
-        document.getElementById('uykuSuresiMetin').textContent = Math.floor(toplamFark / 60) + " sa. " + (toplamFark % 60) + " dk.";
-        document.getElementById('uykuYayi').setAttribute('stroke-dasharray', ((toplamFark / (24 * 60)) * 251.2) + ", 251.2");
+        let saatFark = Math.floor(toplamFark / 60);
+        let dakFark = toplamFark % 60;
+        
+        // Güvenlik: NaN oluşursa 0 sa. 0 dk. göster
+        if (isNaN(saatFark) || isNaN(dakFark)) {
+            document.getElementById('uykuSuresiMetin').textContent = "Hesaplanıyor...";
+            document.getElementById('uykuYayi').setAttribute('stroke-dasharray', "0, 251.2");
+        } else {
+            document.getElementById('uykuSuresiMetin').textContent = saatFark + " sa. " + dakFark + " dk.";
+            document.getElementById('uykuYayi').setAttribute('stroke-dasharray', ((toplamFark / (24 * 60)) * 251.2) + ", 251.2");
+        }
     }
     uykuCemberiniGuncelle("00:20", "09:00");
 
+    // 4. BULUTTAN ANLIK VERİ OKUMA VE UI GÜNCELLEME
     db.ref('/durum').on('value', (snap) => {
         const veri = snap.val();
         const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
@@ -282,7 +354,8 @@
     db.ref('/parlaklik').on('value', (snap) => { 
         const veri = snap.val();
         if (veri !== null && veri > 0) { 
-            sonKaydedilenParlaklik = veri; localStorage.setItem("son_parlaklik", veri);
+            sonKaydedilenParlaklik = veri;
+            localStorage.setItem("son_parlaklik", veri);
             if (ledAcikMi) {
                 document.getElementById('parlaklikSurgusu').value = veri; 
                 document.getElementById('parlaklikYuzde').textContent = "%" + veri; 
@@ -290,6 +363,7 @@
             }
         } 
     });
+
     db.ref('/uykuPlani').on('value', (snap) => { const veri = snap.val(); if (veri && veri.yatma && veri.uyanma) { uykuCemberiniGuncelle(veri.yatma, veri.uyanma); } });
 </script>
 </body>
