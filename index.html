@@ -118,7 +118,6 @@
         <div class="info-card">
             <div class="card-header">🎚️ GEÇİŞ YUMUŞAKLIĞI (FADE HIZI)</div>
             <div class="slider-container" style="margin-top: 2px;">
-                <!-- DÜZELTME 1: Başlangıç Metni Düzeltildi -->
                 <div class="slider-label"><span>Tepki Süresi</span><span id="fadeMetin">Anlık / Keskin (3)</span></div>
                 <input type="range" id="fadeSurgusu" min="1" max="10" value="3" oninput="fadeDegisti(this.value)">
             </div>
@@ -158,7 +157,6 @@
     </div>
 </div>
 
-<!-- YENİ: ÖZEL ENDÜSTRİYEL İKONLARA SAHİP FLOATING NAV BAR -->
 <div class="floating-nav-wrapper">
     <nav class="floating-nav">
         <!-- 1. İkon: Açık Kapılı Ev -->
@@ -261,7 +259,6 @@
             }
             btn.classList.remove('active'); surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)";
             
-            // DÜZELTME 2: Parlaklığı sıfırlama, sadece KAPALI komutu gönder.
             db.ref('/durum').set("KAPALI"); 
         }
     }
@@ -281,13 +278,11 @@
 
     function modUygula(yuzde, modAdi) { document.getElementById('parlaklikSurgusu').value = yuzde; parlaklikDegisti(yuzde); }
     
-    // DÜZELTME 3: Fade Mantığı Tersine Çevrildi
     function fadeDegisti(deger) {
         const metin = deger <= 3 ? "Anlık / Keskin (" + deger + ")" : (deger <= 6 ? "Normal (" + deger + ")" : "Sinematik (" + deger + ")");
         document.getElementById('fadeMetin').textContent = metin; db.ref('/fadeHizi').set(parseInt(deger));
     }
     
-    // DÜZELTME 4: Fade Barı Bulut Hafızası Eklendi
     db.ref('/fadeHizi').on('value', (snap) => {
         const veri = snap.val();
         if (veri !== null) {
@@ -310,21 +305,18 @@
         document.getElementById('yatmaSaati').textContent = yatma; 
         document.getElementById('uyanmaSaati').textContent = uyanma;
 
-        // Hem İki Noktayı (:) Hem de Tek Noktayı (.) Algılayan Akıllı Parser
         let [ySaat, yDak] = yatma.toString().split(/[:.]/).map(Number);
         let [uSaat, uDak] = uyanma.toString().split(/[:.]/).map(Number);
         
         let yatmaDakika = (ySaat || 0) * 60 + (yDak || 0);
         let uyanmaDakika = (uSaat || 0) * 60 + (uDak || 0);
         
-        // 24 Saatlik Döngü (Gece yarısını geçme durumu)
         if (uyanmaDakika <= yatmaDakika) uyanmaDakika += 24 * 60;
         
         let toplamFark = uyanmaDakika - yatmaDakika;
         let saatFark = Math.floor(toplamFark / 60);
         let dakFark = toplamFark % 60;
         
-        // Güvenlik: NaN oluşursa 0 sa. 0 dk. göster
         if (isNaN(saatFark) || isNaN(dakFark)) {
             document.getElementById('uykuSuresiMetin').textContent = "Hesaplanıyor...";
             document.getElementById('uykuYayi').setAttribute('stroke-dasharray', "0, 251.2");
@@ -335,7 +327,9 @@
     }
     uykuCemberiniGuncelle("00:20", "09:00");
 
+    // ----------------------------------------------------
     // 4. BULUTTAN ANLIK VERİ OKUMA VE UI GÜNCELLEME
+    // ----------------------------------------------------
     db.ref('/durum').on('value', (snap) => {
         const veri = snap.val();
         const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
@@ -365,6 +359,19 @@
     });
 
     db.ref('/uykuPlani').on('value', (snap) => { const veri = snap.val(); if (veri && veri.yatma && veri.uyanma) { uykuCemberiniGuncelle(veri.yatma, veri.uyanma); } });
+
+    // YENİ: ALARM MODU HAFIZASI
+    db.ref('/otomasyonlar/alarmModu').on('value', (snap) => {
+        const secilenMod = snap.val();
+        document.querySelectorAll('.alarm-opt-card').forEach(el => el.classList.remove('selected'));
+        if (secilenMod === "SMOOTH_BLINK") {
+            document.getElementById('opt-2').classList.add('selected');
+        } else {
+            // "FADE_IN" veya boşsa varsayılan olarak 1. seçeneği göster
+            document.getElementById('opt-1').classList.add('selected');
+        }
+    });
+
 </script>
 </body>
 </html>
