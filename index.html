@@ -20,6 +20,7 @@
             --accent-glow: #ffae00; --accent-soft: rgba(255, 174, 0, 0.15);
             --text-main: #ffffff; --text-sec: #8e8e93;
             --ios-blue: #0a84ff; --ios-orange: #ff9f0a; --ios-purple: #bf5af2; --ios-green: #30d158;
+            --error-red: #ff3b30;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-dark); color: var(--text-main); display: flex; justify-content: center; min-height: 100vh; padding: 10px 12px 85px 12px; }
@@ -27,10 +28,10 @@
         .app-container { width: 100%; max-width: 430px; display: flex; flex-direction: column; gap: 12px; }
         .header { display: flex; justify-content: space-between; align-items: center; padding: 5px 4px; } .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; } .header-right { display: flex; align-items: center; gap: 8px; }
         
-        /* Tıklanabilir Ev Durumu Rozeti */
         .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; display: flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.3s; user-select: none; } 
         .status-badge.evde { background: rgba(48, 209, 88, 0.15); color: var(--ios-green); }
         .status-badge.disarida { background: rgba(142, 142, 147, 0.15); color: var(--text-sec); }
+        .status-badge.hata { background: rgba(255, 59, 48, 0.15); color: var(--error-red); }
         
         .settings-icon { width: 30px; height: 30px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; color: var(--text-main); }
         
@@ -40,8 +41,9 @@
         .hero-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 22px 18px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
         .power-btn-outer { width: 135px; height: 135px; border-radius: 50%; background: #08080a; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 3px solid #242426; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .power-btn-outer.active { border-color: var(--accent-glow); box-shadow: 0 0 35px rgba(255, 174, 0, 0.35), inset 0 0 15px rgba(255, 174, 0, 0.2); }
-        .power-icon { font-size: 44px; color: #3a3a3c; transition: color 0.4s ease; } .power-btn-outer.active .power-icon { color: var(--accent-glow); text-shadow: 0 0 15px var(--accent-glow); }
-        .power-status-text { font-size: 13px; font-weight: 600; letter-spacing: 0.8px; color: var(--text-sec); } .power-btn-outer.active + .power-status-text { color: var(--text-main); }
+        .power-btn-outer.error { border-color: var(--error-red); box-shadow: 0 0 25px rgba(255, 59, 48, 0.3); }
+        .power-icon { font-size: 44px; color: #3a3a3c; transition: color 0.4s ease; } .power-btn-outer.active .power-icon { color: var(--accent-glow); text-shadow: 0 0 15px var(--accent-glow); } .power-btn-outer.error .power-icon { color: var(--error-red); }
+        .power-status-text { font-size: 13px; font-weight: 600; letter-spacing: 0.8px; color: var(--text-sec); text-align: center; } .power-btn-outer.active + .power-status-text { color: var(--text-main); }
         
         .slider-container { width: 100%; display: flex; flex-direction: column; gap: 6px; } .slider-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-sec); font-weight: 500; }
         input[type=range] { -webkit-appearance: none; width: 100%; height: 6px; background: #242426; border-radius: 5px; outline: none; }
@@ -78,9 +80,8 @@
     <header class="header">
         <h1>LED Control</h1>
         <div class="header-right">
-            <!-- Ev Durumu Rozeti -->
             <div class="status-badge evde" id="evDurumBadge" onclick="evDurumuTetikle()">🏠 Evde</div>
-            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.3 (Final)')">⚙️</div>
+            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.4 (Teşhis Modu)')">⚙️</div>
         </div>
     </header>
 
@@ -173,15 +174,23 @@
 </div>
 
 <script>
-    // KUSURSUZ ÇALIŞAN GERÇEK API ANAHTARIN (BÜYÜK L İLE)
     const firebaseConfig = { 
-        apiKey: "AIzaSyBEhsUAqN4L-ATvLFCjLkBvTaAAXdvF8qM", 
+        apiKey: "AIzaSyBEhsUAqN4l-ATvLFCjLkBvTaAAXdvF8qM", 
         databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", 
         projectId: "led-control-79bc3" 
     };
-    
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
+
+    // HATA YAKALAYICI EKLENDİ - Firebase bağlantıyı reddederse anında ekranda basacak
+    function firebaseHatasiGoster(error) {
+        document.getElementById('durumMetni').innerHTML = "<span style='color:var(--error-red);'>FİREBASE ERİŞİMİ REDDETTİ!</span><br><span style='font-size:10px; color:#8e8e93;'>(" + error.code + ")</span>";
+        document.getElementById('gucButonu').classList.add('error');
+        document.getElementById('evDurumBadge').innerHTML = "⚠️ Hata";
+        document.getElementById('evDurumBadge').className = "status-badge hata";
+        
+        alert("FİREBASE ERİŞİM ENGELİ!\n\nHata Kodu: " + error.code + "\n\nMuhtemelen Firebase veritabanının 30 günlük test süresi doldu ve güvenlik sebebiyle kendini kilitledi. Lütfen Firebase paneline girip 'Rules' sekmesini kontrol edin.");
+    }
 
     function sekmeDegistir(sekmeAdi, element) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -196,9 +205,13 @@
             sonKaydedilenParlaklik = snap.val();
             localStorage.setItem("son_parlaklik", sonKaydedilenParlaklik);
         }
-    });
+    }, firebaseHatasiGoster);
 
     function gucKapatAc() {
+        if(document.getElementById('gucButonu').classList.contains('error')) {
+            alert("Bağlantı hatası devam ediyor. Lütfen Firebase kurallarınızı kontrol edin.");
+            return;
+        }
         const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
         const surgusu = document.getElementById('parlaklikSurgusu'); const yuzdeMetin = document.getElementById('parlaklikYuzde');
         ledAcikMi = !ledAcikMi;
@@ -217,10 +230,11 @@
             btn.classList.remove('active'); surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)";
             koli['/durum'] = "KAPALI"; koli['/parlaklik'] = 0;
         }
-        db.ref().update(koli); 
+        db.ref().update(koli).catch(firebaseHatasiGoster); 
     }
 
     function parlaklikDegisti(deger) {
+        if(document.getElementById('gucButonu').classList.contains('error')) return;
         deger = parseInt(deger);
         document.getElementById('parlaklikYuzde').textContent = "%" + deger; 
         let koli = {};
@@ -241,14 +255,14 @@
         
         koli['/durum'] = ledAcikMi ? "ACIK";
         koli['/parlaklik'] = deger;
-        db.ref().update(koli); 
+        db.ref().update(koli).catch(firebaseHatasiGoster); 
     }
 
     function modUygula(yuzde, modAdi) { document.getElementById('parlaklikSurgusu').value = yuzde; parlaklikDegisti(yuzde); }
     
     function fadeDegisti(deger) {
         const metin = deger <= 3 ? "Anlık / Keskin (" + deger + ")" : (deger <= 6 ? "Normal (" + deger + ")" : "Sinematik (" + deger + ")");
-        document.getElementById('fadeMetin').textContent = metin; db.ref('/fadeHizi').set(parseInt(deger));
+        document.getElementById('fadeMetin').textContent = metin; db.ref('/fadeHizi').set(parseInt(deger)).catch(firebaseHatasiGoster);
     }
     
     db.ref('/fadeHizi').on('value', (snap) => {
@@ -258,13 +272,13 @@
             const metin = veri <= 3 ? "Anlık / Keskin (" + veri + ")" : (veri <= 6 ? "Normal (" + veri + ")" : "Sinematik (" + veri + ")");
             document.getElementById('fadeMetin').textContent = metin;
         }
-    });
+    }, firebaseHatasiGoster);
 
     function alarmSecim(secenekNo) {
         document.querySelectorAll('.alarm-opt-card').forEach(el => el.classList.remove('selected'));
-        document.getElementById('opt-' + secenekNo).classList.add('selected'); db.ref('/otomasyonlar/alarmModu').set(secenekNo === 1 ? "FADE_IN" : "SMOOTH_BLINK");
+        document.getElementById('opt-' + secenekNo).classList.add('selected'); db.ref('/otomasyonlar/alarmModu').set(secenekNo === 1 ? "FADE_IN" : "SMOOTH_BLINK").catch(firebaseHatasiGoster);
     }
-    function otomasyonKaydet(anahtar, durum) { db.ref('/otomasyonlar/' + anahtar).set(durum); }
+    function otomasyonKaydet(anahtar, durum) { db.ref('/otomasyonlar/' + anahtar).set(durum).catch(firebaseHatasiGoster); }
 
     function uykuCemberiniGuncelle(yatma, uyanma) {
         document.getElementById('yatmaSaati').textContent = yatma; 
@@ -305,7 +319,7 @@
             ledAcikMi = false; btn.classList.remove('active'); 
             surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)"; 
         }
-    });
+    }, firebaseHatasiGoster);
 
     db.ref('/parlaklik').on('value', (snap) => { 
         const veri = snap.val();
@@ -318,16 +332,16 @@
                 document.getElementById('durumMetni').textContent = "LED'LER AÇIK (%" + veri + ")";
             }
         } 
-    });
+    }, firebaseHatasiGoster);
 
-    db.ref('/uykuPlani').on('value', (snap) => { const veri = snap.val(); if (veri && veri.yatma && veri.uyanma) { uykuCemberiniGuncelle(veri.yatma, veri.uyanma); } });
+    db.ref('/uykuPlani').on('value', (snap) => { const veri = snap.val(); if (veri && veri.yatma && veri.uyanma) { uykuCemberiniGuncelle(veri.yatma, veri.uyanma); } }, firebaseHatasiGoster);
 
     db.ref('/otomasyonlar/alarmModu').on('value', (snap) => {
         const secilenMod = snap.val();
         document.querySelectorAll('.alarm-opt-card').forEach(el => el.classList.remove('selected'));
         if (secilenMod === "SMOOTH_BLINK") { document.getElementById('opt-2').classList.add('selected'); } 
         else { document.getElementById('opt-1').classList.add('selected'); }
-    });
+    }, firebaseHatasiGoster);
 
     let evdeMiyim = true;
     db.ref('/otomasyonlar/evdeMi').on('value', (snap) => {
@@ -343,10 +357,11 @@
             badge.innerHTML = "🌍 Dışarıda";
             badge.className = "status-badge disarida";
         }
-    });
+    }, firebaseHatasiGoster);
 
     function evDurumuTetikle() {
-        db.ref('/otomasyonlar/evdeMi').set(!evdeMiyim);
+        if(document.getElementById('gucButonu').classList.contains('error')) return;
+        db.ref('/otomasyonlar/evdeMi').set(!evdeMiyim).catch(firebaseHatasiGoster);
     }
 </script>
 </body>
