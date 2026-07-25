@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LED Control</title>
     
-    <!-- YENİ LOGO ENTEGRASYONU (Resmin adının logo.jpg olduğundan emin ol) -->
     <link rel="apple-touch-icon" href="logo.jpg">
     
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -36,7 +35,12 @@
         
         .app-container { width: 100%; max-width: 430px; display: flex; flex-direction: column; gap: 12px; }
         .header { display: flex; justify-content: space-between; align-items: center; padding: 5px 4px; } .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; } .header-right { display: flex; align-items: center; gap: 8px; }
-        .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(48, 209, 88, 0.15); color: var(--ios-green); font-weight: 600; display: flex; align-items: center; gap: 5px; } .status-badge::before { content: ""; width: 6px; height: 6px; background: var(--ios-green); border-radius: 50%; box-shadow: 0 0 8px var(--ios-green); }
+        
+        /* YENİ: Tıklanabilir Ev Durumu Rozeti */
+        .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; display: flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.3s; user-select: none; } 
+        .status-badge.evde { background: rgba(48, 209, 88, 0.15); color: var(--ios-green); }
+        .status-badge.disarida { background: rgba(142, 142, 147, 0.15); color: var(--text-sec); }
+        
         .settings-icon { width: 30px; height: 30px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; color: var(--text-main); }
         
         .tab-content { display: none; flex-direction: column; gap: 12px; animation: fadeIn 0.25s ease; } .tab-content.active { display: flex; }
@@ -94,9 +98,11 @@
     <header class="header">
         <h1>LED Control</h1>
         <div class="header-right">
-            <div class="status-badge" id="baglantiDurumu">Çevrimiçi</div>
+            <!-- YENİ TIKLANABİLİR EV DURUMU ROZETİ -->
+            <div class="status-badge evde" id="evDurumBadge" onclick="evDurumuTetikle()">🏠 Evde</div>
+            
             <div class="settings-icon" onclick="kilidiKapat()" title="Kilitle">🔒</div>
-            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v6.4 Atomic Sync')">⚙️</div>
+            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.0 Presence Check')">⚙️</div>
         </div>
     </header>
 
@@ -227,12 +233,11 @@
         }
     });
 
-    // YENİ: ATOMİK GÜNCELLEME (ESP32'NİN KAFASININ KARIŞMASINI %100 ENGELLER)
     function gucKapatAc() {
         const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
         const surgusu = document.getElementById('parlaklikSurgusu'); const yuzdeMetin = document.getElementById('parlaklikYuzde');
         ledAcikMi = !ledAcikMi;
-        let koli = {}; // Veri Paketi
+        let koli = {}; 
         
         if (ledAcikMi) {
             btn.classList.add('active'); surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik;
@@ -247,10 +252,9 @@
             btn.classList.remove('active'); surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)";
             koli['/durum'] = "KAPALI"; koli['/parlaklik'] = 0;
         }
-        db.ref().update(koli); // Tek Seferde Fırlat
+        db.ref().update(koli); 
     }
 
-    // YENİ: ATOMİK GÜNCELLEME İLE PARLAKLIK DEĞİŞİMİ
     function parlaklikDegisti(deger) {
         deger = parseInt(deger);
         document.getElementById('parlaklikYuzde').textContent = "%" + deger; 
@@ -270,9 +274,9 @@
         
         document.getElementById('durumMetni').textContent = ledAcikMi ? "LED'LER AÇIK (%" + deger + ")" : "LED'LER KAPALI (%0)";
         
-        koli['/durum'] = ledAcikMi ? "ACIK" : "KAPALI";
+        koli['/durum'] = ledAcikMi ? "ACIK";
         koli['/parlaklik'] = deger;
-        db.ref().update(koli); // Tek Seferde Fırlat
+        db.ref().update(koli); 
     }
 
     function modUygula(yuzde, modAdi) { document.getElementById('parlaklikSurgusu').value = yuzde; parlaklikDegisti(yuzde); }
@@ -359,6 +363,28 @@
         if (secilenMod === "SMOOTH_BLINK") { document.getElementById('opt-2').classList.add('selected'); } 
         else { document.getElementById('opt-1').classList.add('selected'); }
     });
+
+    // YENİ: EV DURUMU (PRESENCE) DİNLEYİCİSİ VE FONKSİYONU
+    let evdeMiyim = true;
+    db.ref('/otomasyonlar/evdeMi').on('value', (snap) => {
+        let durum = snap.val();
+        if (durum === null) durum = true; // İlk açılışta varsayılan evde
+        evdeMiyim = durum;
+        
+        const badge = document.getElementById('evDurumBadge');
+        if (evdeMiyim) {
+            badge.innerHTML = "🏠 Evde";
+            badge.className = "status-badge evde";
+        } else {
+            badge.innerHTML = "🌍 Dışarıda";
+            badge.className = "status-badge disarida";
+        }
+    });
+
+    function evDurumuTetikle() {
+        // Tıklandığında tam tersini Firebase'e yaz
+        db.ref('/otomasyonlar/evdeMi').set(!evdeMiyim);
+    }
 </script>
 </body>
 </html>
