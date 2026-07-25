@@ -11,7 +11,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="LED Control">
     
+    <!-- YETKİ KÜTÜPHANESİ EKLENDİ (Bunu unutmuştum) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
@@ -27,7 +29,6 @@
         .app-container { width: 100%; max-width: 430px; display: flex; flex-direction: column; gap: 12px; }
         .header { display: flex; justify-content: space-between; align-items: center; padding: 5px 4px; } .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; } .header-right { display: flex; align-items: center; gap: 8px; }
         
-        /* Tıklanabilir Ev Durumu Rozeti */
         .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; display: flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.3s; user-select: none; } 
         .status-badge.evde { background: rgba(48, 209, 88, 0.15); color: var(--ios-green); }
         .status-badge.disarida { background: rgba(142, 142, 147, 0.15); color: var(--text-sec); }
@@ -78,16 +79,15 @@
     <header class="header">
         <h1>LED Control</h1>
         <div class="header-right">
-            <!-- Ev Durumu Rozeti -->
             <div class="status-badge evde" id="evDurumBadge" onclick="evDurumuTetikle()">🏠 Evde</div>
-            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.1 (API Fix)')">⚙️</div>
+            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.2 (Auth Fix)')">⚙️</div>
         </div>
     </header>
 
     <div id="tab-anasayfa" class="tab-content active">
         <div class="hero-card">
             <div class="power-btn-outer" id="gucButonu" onclick="gucKapatAc()"><div class="power-icon">⏻</div></div>
-            <div class="power-status-text" id="durumMetni">YÜKLENİYOR...</div>
+            <div class="power-status-text" id="durumMetni">BAĞLANIYOR...</div>
             <div class="slider-container">
                 <div class="slider-label"><span>Parlaklık</span><span id="parlaklikYuzde">%0</span></div>
                 <input type="range" id="parlaklikSurgusu" min="1" max="100" value="0" oninput="parlaklikDegisti(this.value)">
@@ -173,13 +173,19 @@
 </div>
 
 <script>
-    // HATANIN DÜZELTİLDİĞİ YER: apiKey içerisindeki N4L harfi N4l olarak değiştirildi.
     const firebaseConfig = { 
         apiKey: "AIzaSyBEhsUAqN4l-ATvLFCjLkBvTaAAXdvF8qM", 
         databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", 
         projectId: "led-control-79bc3" 
     };
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    
+    // GÜVENLİK DUVARI AŞIMI - Veritabanına yetkili giriş (HATANIN ÇÖZÜMÜ)
+    firebase.auth().signInWithEmailAndPassword("mertberent@gmail.com", "Killhunter35")
+    .catch(function(error) {
+        document.getElementById('durumMetni').textContent = "YETKİ HATASI: " + error.message;
+    });
+
     const db = firebase.database();
 
     function sekmeDegistir(sekmeAdi, element) {
