@@ -24,19 +24,10 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-dark); color: var(--text-main); display: flex; justify-content: center; min-height: 100vh; padding: 10px 12px 85px 12px; }
         
-        #pin-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.96); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 30px; transition: opacity 0.4s ease, visibility 0.4s ease; }
-        #pin-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-        .pin-header { text-align: center; } .pin-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; } .pin-header p { font-size: 13px; color: var(--text-sec); }
-        .pin-dots { display: flex; gap: 16px; margin: 10px 0; } .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--text-sec); transition: all 0.2s; } .dot.filled { background: var(--accent-glow); border-color: var(--accent-glow); box-shadow: 0 0 10px var(--accent-glow); } .dot.error { border-color: #ff3b30; background: #ff3b30; animation: shake 0.4s; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25%, 75% { transform: translateX(-8px); } 50% { transform: translateX(8px); } }
-        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; max-width: 280px; width: 100%; }
-        .key-btn { width: 75px; height: 75px; border-radius: 50%; background: #1c1c1e; border: 1px solid #2c2c2e; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; font-size: 26px; font-weight: 600; color: #fff; transition: background 0.15s, transform 0.1s; }
-        .key-btn:active { background: #3a3a3c; transform: scale(0.92); } .key-btn span { font-size: 10px; color: var(--text-sec); font-weight: 700; letter-spacing: 1.5px; margin-top: -2px; } .key-btn.empty { background: transparent; border: none; cursor: default; }
-        
         .app-container { width: 100%; max-width: 430px; display: flex; flex-direction: column; gap: 12px; }
         .header { display: flex; justify-content: space-between; align-items: center; padding: 5px 4px; } .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; } .header-right { display: flex; align-items: center; gap: 8px; }
         
-        /* YENİ: Tıklanabilir Ev Durumu Rozeti */
+        /* Tıklanabilir Ev Durumu Rozeti */
         .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; display: flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.3s; user-select: none; } 
         .status-badge.evde { background: rgba(48, 209, 88, 0.15); color: var(--ios-green); }
         .status-badge.disarida { background: rgba(142, 142, 147, 0.15); color: var(--text-sec); }
@@ -83,26 +74,13 @@
 </head>
 <body>
 
-<div id="pin-overlay">
-    <div class="pin-header"><h2>LED Control</h2><p id="pin-mesaj">Güvenlik şifresini girin</p></div>
-    <div class="pin-dots"><div class="dot" id="dot-0"></div><div class="dot" id="dot-1"></div><div class="dot" id="dot-2"></div><div class="dot" id="dot-3"></div></div>
-    <div class="keypad">
-        <div class="key-btn" onclick="tusBas(1)">1<span></span></div><div class="key-btn" onclick="tusBas(2)">2<span>ABC</span></div><div class="key-btn" onclick="tusBas(3)">3<span>DEF</span></div>
-        <div class="key-btn" onclick="tusBas(4)">4<span>GHI</span></div><div class="key-btn" onclick="tusBas(5)">5<span>JKL</span></div><div class="key-btn" onclick="tusBas(6)">6<span>MNO</span></div>
-        <div class="key-btn" onclick="tusBas(7)">7<span>PQRS</span></div><div class="key-btn" onclick="tusBas(8)">8<span>TUV</span></div><div class="key-btn" onclick="tusBas(9)">9<span>WXYZ</span></div>
-        <div class="key-btn empty"></div><div class="key-btn" onclick="tusBas(0)">0<span></span></div><div class="key-btn" onclick="tusSil()" style="font-size: 20px;">⌫<span>SİL</span></div>
-    </div>
-</div>
-
 <div class="app-container">
     <header class="header">
         <h1>LED Control</h1>
         <div class="header-right">
-            <!-- YENİ TIKLANABİLİR EV DURUMU ROZETİ -->
+            <!-- Ev Durumu Rozeti -->
             <div class="status-badge evde" id="evDurumBadge" onclick="evDurumuTetikle()">🏠 Evde</div>
-            
-            <div class="settings-icon" onclick="kilidiKapat()" title="Kilitle">🔒</div>
-            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.0 Presence Check')">⚙️</div>
+            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.0 (Şifresiz)')">⚙️</div>
         </div>
     </header>
 
@@ -195,25 +173,6 @@
 </div>
 
 <script>
-    const DOGRU_PIN = "1905"; let girilenPin = "";
-    if (localStorage.getItem("pin_auth") === "true") { document.getElementById("pin-overlay").classList.add("hidden"); }
-    function tusBas(rakam) {
-        if (girilenPin.length < 4) { girilenPin += rakam; document.getElementById("dot-" + (girilenPin.length - 1)).classList.add("filled"); }
-        if (girilenPin.length === 4) {
-            setTimeout(() => {
-                if (girilenPin === DOGRU_PIN) {
-                    document.getElementById("pin-overlay").classList.add("hidden"); localStorage.setItem("pin_auth", "true"); girilenPin = ""; noktalariSifirla();
-                } else {
-                    document.querySelectorAll(".dot").forEach(el => el.classList.add("error")); document.getElementById("pin-mesaj").textContent = "Yanlış Şifre!"; document.getElementById("pin-mesaj").style.color = "#ff3b30";
-                    setTimeout(() => { girilenPin = ""; noktalariSifirla(); document.getElementById("pin-mesaj").textContent = "Güvenlik şifresini girin"; document.getElementById("pin-mesaj").style.color = "var(--text-sec)"; }, 600);
-                }
-            }, 150);
-        }
-    }
-    function tusSil() { if (girilenPin.length > 0) { girilenPin = girilenPin.slice(0, -1); document.getElementById("dot-" + girilenPin.length).classList.remove("filled"); } }
-    function noktalariSifirla() { document.querySelectorAll(".dot").forEach(el => { el.classList.remove("filled"); el.classList.remove("error"); }); }
-    function kilidiKapat() { localStorage.removeItem("pin_auth"); document.getElementById("pin-overlay").classList.remove("hidden"); }
-
     const firebaseConfig = { apiKey: "AIzaSyBEhsUAqN4L-ATvLFCjLkBvTaAAXdvF8qM", databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", projectId: "led-control-79bc3" };
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
@@ -364,11 +323,10 @@
         else { document.getElementById('opt-1').classList.add('selected'); }
     });
 
-    // YENİ: EV DURUMU (PRESENCE) DİNLEYİCİSİ VE FONKSİYONU
     let evdeMiyim = true;
     db.ref('/otomasyonlar/evdeMi').on('value', (snap) => {
         let durum = snap.val();
-        if (durum === null) durum = true; // İlk açılışta varsayılan evde
+        if (durum === null) durum = true; 
         evdeMiyim = durum;
         
         const badge = document.getElementById('evDurumBadge');
@@ -382,7 +340,6 @@
     });
 
     function evDurumuTetikle() {
-        // Tıklandığında tam tersini Firebase'e yaz
         db.ref('/otomasyonlar/evdeMi').set(!evdeMiyim);
     }
 </script>
