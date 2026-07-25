@@ -80,7 +80,7 @@
         <div class="header-right">
             <!-- Ev Durumu Rozeti -->
             <div class="status-badge evde" id="evDurumBadge" onclick="evDurumuTetikle()">🏠 Evde</div>
-            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.0 (Şifresiz)')">⚙️</div>
+            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.1 (API Fix)')">⚙️</div>
         </div>
     </header>
 
@@ -173,7 +173,12 @@
 </div>
 
 <script>
-    const firebaseConfig = { apiKey: "AIzaSyBEhsUAqN4L-ATvLFCjLkBvTaAAXdvF8qM", databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", projectId: "led-control-79bc3" };
+    // HATANIN DÜZELTİLDİĞİ YER: apiKey içerisindeki N4L harfi N4l olarak değiştirildi.
+    const firebaseConfig = { 
+        apiKey: "AIzaSyBEhsUAqN4l-ATvLFCjLkBvTaAAXdvF8qM", 
+        databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", 
+        projectId: "led-control-79bc3" 
+    };
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
 
