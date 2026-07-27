@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LED Control</title>
+    
+    <link rel="apple-touch-icon" href="logo.jpg">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LED Control">
+    
+    <!-- Firebase Kütüphaneleri -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #000000; --card-bg: #161618; --card-border: #242426;
+            --accent-glow: #ffae00; --accent-soft: rgba(255, 174, 0, 0.15);
+            --text-main: #ffffff; --text-sec: #8e8e93;
+            --ios-blue: #0a84ff; --ios-orange: #ff9f0a; --ios-purple: #bf5af2; --ios-green: #30d158;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; justify-content: center; min-height: 100vh; padding: 10px 12px 85px 12px; }
+        
+        .app-container { width: 100%; max-width: 430px; display: flex; flex-direction: column; gap: 12px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 5px 4px; } .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; } .header-right { display: flex; align-items: center; gap: 8px; }
+        
+        .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; display: flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.3s; user-select: none; } 
+        .status-badge.evde { background: rgba(48, 209, 88, 0.15); color: var(--ios-green); }
+        .status-badge.disarida { background: rgba(142, 142, 147, 0.15); color: var(--text-sec); }
+        
+        .settings-icon { width: 30px; height: 30px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; color: var(--text-main); }
+        
+        .tab-content { display: none; flex-direction: column; gap: 12px; animation: fadeIn 0.25s ease; } .tab-content.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .hero-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 22px 18px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+        .power-btn-outer { width: 135px; height: 135px; border-radius: 50%; background: #08080a; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 3px solid #242426; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .power-btn-outer.active { border-color: var(--accent-glow); box-shadow: 0 0 35px rgba(255, 174, 0, 0.35), inset 0 0 15px rgba(255, 174, 0, 0.2); }
+        .power-icon { font-size: 44px; color: #3a3a3c; transition: color 0.4s ease; } .power-btn-outer.active .power-icon { color: var(--accent-glow); text-shadow: 0 0 15px var(--accent-glow); }
+        .power-status-text { font-size: 13px; font-weight: 600; letter-spacing: 0.8px; color: var(--text-sec); text-align: center; line-height: 1.4; } .power-btn-outer.active + .power-status-text { color: var(--text-main); }
+        
+        .slider-container { width: 100%; display: flex; flex-direction: column; gap: 6px; } .slider-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-sec); font-weight: 500; }
+        input[type=range] { -webkit-appearance: none; width: 100%; height: 6px; background: #242426; border-radius: 5px; outline: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #ffffff; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.5); transition: transform 0.1s; }
+        input[type=range]:active::-webkit-slider-thumb { transform: scale(1.25); background: var(--accent-glow); box-shadow: 0 0 15px var(--accent-glow); }
+        
+        .presets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+        .preset-btn { background: #08080a; border: 1px solid var(--card-border); color: var(--text-main); padding: 12px 4px; border-radius: 14px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: all 0.2s; }
+        .preset-btn:active { border-color: var(--accent-glow); background: var(--accent-soft); } .preset-btn span { font-size: 16px; }
+        
+        .info-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 10px; } .card-header { font-size: 11px; color: var(--text-sec); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sleep-circle-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 20px 16px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+        .sleep-times-header { display: flex; justify-content: space-between; width: 100%; padding: 0 10px; } .time-col { display: flex; flex-direction: column; align-items: center; gap: 2px; } .time-col span { font-size: 11px; color: var(--text-sec); font-weight: 600; display: flex; align-items: center; gap: 4px; } .time-col h2 { font-size: 20px; font-weight: 700; }
+        .circle-container { position: relative; width: 180px; height: 180px; display: flex; justify-content: center; align-items: center; } .circle-svg { width: 100%; height: 100%; transform: rotate(-90deg); } .circle-bg { fill: none; stroke: #242426; stroke-width: 14; } .circle-progress { fill: none; stroke: var(--accent-glow); stroke-width: 14; stroke-linecap: round; transition: stroke-dasharray 0.8s ease; } .circle-center-content { position: absolute; display: flex; flex-direction: column; align-items: center; text-align: center; } .circle-inner-text { font-size: 18px; font-weight: 700; color: var(--text-main); } .circle-inner-sub { font-size: 10px; color: var(--text-sec); margin-top: 2px; }
+        
+        .alarm-options { display: flex; flex-direction: column; gap: 8px; width: 100%; } .alarm-opt-card { background: #08080a; border: 1px solid var(--card-border); border-radius: 14px; padding: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: 0.2s; } .alarm-opt-card.selected { border-color: var(--accent-glow); background: rgba(255, 174, 0, 0.08); } .alarm-opt-text h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; } .alarm-opt-text p { font-size: 11px; color: var(--text-sec); } .check-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--text-sec); display: flex; align-items: center; justify-content: center; } .alarm-opt-card.selected .check-circle { border-color: var(--accent-glow); background: var(--accent-glow); } .alarm-opt-card.selected .check-circle::after { content: "✓"; font-size: 11px; color: #000; font-weight: bold; }
+        
+        .automation-list { display: flex; flex-direction: column; gap: 10px; } .shortcut-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 14px; display: flex; align-items: center; justify-content: space-between; } .shortcut-left { display: flex; align-items: center; gap: 12px; } .shortcut-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; flex-shrink: 0; } .icon-blue { background-color: var(--ios-blue); } .icon-orange { background-color: var(--ios-orange); } .icon-purple { background-color: var(--ios-purple); } .shortcut-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; } .shortcut-info p { font-size: 11px; color: var(--text-sec); }
+        
+        .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; } .switch input { opacity: 0; width: 0; height: 0; } .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #39393d; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 24px; } .slider-switch:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); } input:checked + .slider-switch { background-color: var(--ios-green); } input:checked + .slider-switch:before { transform: translateX(18px); }
+        
+        .floating-nav-wrapper { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 360px; z-index: 1000; }
+        .floating-nav { background: rgba(26, 26, 30, 0.85); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 35px; padding: 6px 15px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--text-sec); font-size: 10px; font-weight: 500; cursor: pointer; padding: 6px 14px; border-radius: 22px; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+        .nav-item.active { color: var(--accent-glow); background: rgba(255, 174, 0, 0.12); font-weight: 600; transform: translateY(-2px); }
+        .nav-icon { width: 24px; height: 24px; stroke: currentColor; fill: none; transition: all 0.25s; }
+        .nav-item.active .icon-accent { fill: var(--accent-glow); stroke: var(--accent-glow); }
+        .nav-item.active .icon-accent-text { fill: var(--accent-glow); }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header class="header">
+        <h1>LED Control</h1>
+        <div class="header-right">
+            <div class="status-badge evde" id="evDurumBadge" onclick="evDurumuTetikle()">🏠 Evde</div>
+            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.4 (Bulletproof)')">⚙️</div>
+        </div>
+    </header>
+
+    <div id="tab-anasayfa" class="tab-content active">
+        <div class="hero-card">
+            <div class="power-btn-outer" id="gucButonu" onclick="gucKapatAc()"><div class="power-icon">⏻</div></div>
+            <div class="power-status-text" id="durumMetni">SİSTEM BAŞLATILIYOR...</div>
+            <div class="slider-container">
+                <div class="slider-label"><span>Parlaklık</span><span id="parlaklikYuzde">%0</span></div>
+                <input type="range" id="parlaklikSurgusu" min="1" max="100" value="0" oninput="parlaklikDegisti(this.value)">
+            </div>
+            <div class="presets-grid">
+                <button class="preset-btn" onclick="modUygula(15, 'Gece Loş Modu')"><span>🌙</span>Loş Gece</button>
+                <button class="preset-btn" onclick="modUygula(10, 'Sinema Modu')"><span>🍿</span>Sinema</button>
+                <button class="preset-btn" onclick="modUygula(100, 'Maksimum Güç')"><span>☀️</span>Tam Güç</button>
+            </div>
+        </div>
+        <div class="info-card">
+            <div class="card-header">🎚️ GEÇİŞ YUMUŞAKLIĞI (FADE HIZI)</div>
+            <div class="slider-container" style="margin-top: 2px;">
+                <div class="slider-label"><span>Tepki Süresi</span><span id="fadeMetin">Anlık / Keskin (3)</span></div>
+                <input type="range" id="fadeSurgusu" min="1" max="10" value="3" oninput="fadeDegisti(this.value)">
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-zamanlayici" class="tab-content">
+        <div class="sleep-circle-card">
+            <div class="sleep-times-header">
+                <div class="time-col"><span>🛏️ YATMA</span><h2 id="yatmaSaati">00:20</h2></div>
+                <div class="time-col"><span>⏰ UYANMA</span><h2 id="uyanmaSaati">09:00</h2></div>
+            </div>
+            <div class="circle-container">
+                <svg class="circle-svg" viewBox="0 0 100 100">
+                    <circle class="circle-bg" cx="50" cy="50" r="40"></circle>
+                    <circle class="circle-progress" id="uykuYayi" cx="50" cy="50" r="40" stroke-dasharray="90, 251.2"></circle>
+                </svg>
+                <div class="circle-center-content"><div class="circle-inner-text" id="uykuSuresiMetin">8 sa. 40 dk.</div><div class="circle-inner-sub">iOS Uyku Planı<br>Senkronize</div></div>
+            </div>
+            <div style="width: 100%; margin-top: 4px;">
+                <div class="card-header" style="margin-bottom: 8px;">📲 UYANDIRMA MODU SEÇİMİ</div>
+                <div class="alarm-options">
+                    <div class="alarm-opt-card selected" id="opt-1" onclick="alarmSecim(1)"><div class="alarm-opt-text"><h4>🌅 Gün Doğumu (Yavaş Uyandırma)</h4><p>Alarmdan 5 dk önce %1'den %100'e yavaşça açılır.</p></div><div class="check-circle"></div></div>
+                    <div class="alarm-opt-card" id="opt-2" onclick="alarmSecim(2)"><div class="alarm-opt-text"><h4>✨ Smooth Flaşı (Yanıp Sönme)</h4><p>Alarm çaldığı an pürüzsüzce yanıp sönerek uyarır.</p></div><div class="check-circle"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-otomasyon" class="tab-content">
+        <div class="info-card" style="padding: 12px 16px; margin-bottom: 2px;"><p style="font-size: 12px; color: var(--text-sec); line-height: 1.4;">Bu otomasyonlar iPhone'unuzun arka planındaki <b>Wi-Fi bağlantısını</b> algılayarak LED'leri evde olup olmama durumunuza göre otomatik yönetir.</p></div>
+        <div class="automation-list">
+            <div class="shortcut-card"><div class="shortcut-left"><div class="shortcut-icon icon-blue">🏠</div><div class="shortcut-info"><h4>Eve Geldiğimde Aç</h4><p>Ev Wi-Fi ağına bağlanıldığında</p></div></div><label class="switch"><input type="checkbox" checked onchange="otomasyonKaydet('homeDetect', this.checked)"><span class="slider-switch"></span></label></div>
+            <div class="shortcut-card"><div class="shortcut-left"><div class="shortcut-icon icon-orange">🚶</div><div class="shortcut-info"><h4>Evden Çıktığımda Kapat</h4><p>Ev Wi-Fi ağından kopulduğunda</p></div></div><label class="switch"><input type="checkbox" checked onchange="otomasyonKaydet('outDetect', this.checked)"><span class="slider-switch"></span></label></div>
+            <div class="shortcut-card"><div class="shortcut-left"><div class="shortcut-icon icon-purple">🔔</div><div class="shortcut-info"><h4>Otomasyon Bildirimleri</h4><p>Giriş/Çıkış yapıldığında ekrana bildir</p></div></div><label class="switch"><input type="checkbox" checked onchange="otomasyonKaydet('notif', this.checked)"><span class="slider-switch"></span></label></div>
+        </div>
+    </div>
+</div>
+
+<div class="floating-nav-wrapper">
+    <nav class="floating-nav">
+        <div class="nav-item active" onclick="sekmeDegistir('anasayfa', this)">
+            <svg viewBox="0 0 24 24" class="nav-icon" stroke-width="1.8" stroke-linejoin="round">
+                <path d="M3 10L12 2l9 8v11a1 1 0 0 1-1 1h-6v-8h-4v8H4a1 1 0 0 1-1-1V10z" />
+                <path d="M10 13l4-1v9l-4-1v-7z" class="icon-accent" fill="currentColor" stroke="none"/>
+            </svg>
+            <span>Ana Sayfa</span>
+        </div>
+        <div class="nav-item" onclick="sekmeDegistir('zamanlayici', this)">
+            <svg viewBox="0 0 24 24" class="nav-icon" stroke-width="1.8">
+                <rect x="3" y="6" width="18" height="13" rx="3" />
+                <path d="M8 3h8M7 19v2M17 19v2" stroke-linecap="round"/>
+                <text x="12" y="15" font-size="6.5" font-family="monospace" font-weight="bold" text-anchor="middle" class="icon-accent-text" fill="currentColor" stroke="none">0:00</text>
+            </svg>
+            <span>Zamanlayıcı</span>
+        </div>
+        <div class="nav-item" onclick="sekmeDegistir('otomasyon', this)">
+            <svg viewBox="0 0 24 24" class="nav-icon" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="18" width="20" height="4" rx="1.5" />
+                <circle cx="6" cy="20" r="0.8" fill="currentColor" stroke="none"/><circle cx="10" cy="20" r="0.8" fill="currentColor" stroke="none"/><circle cx="14" cy="20" r="0.8" fill="currentColor" stroke="none"/><circle cx="18" cy="20" r="0.8" fill="currentColor" stroke="none"/>
+                <path d="M6 18v-7l5-4h4" />
+                <circle cx="6" cy="14" r="1.5" class="icon-accent" fill="currentColor" stroke="none"/>
+                <circle cx="11" cy="7" r="1.5" class="icon-accent" fill="currentColor" stroke="none"/>
+                <path d="M15 5v3.5m-1.5 0h3m-2.5 1.5v1.5m2-1.5v1.5" class="icon-accent" stroke-width="1.4"/>
+                <rect x="14" y="12" width="4" height="5" rx="0.5" />
+            </svg>
+            <span>Otomasyon</span>
+        </div>
+    </nav>
+</div>
+
+<script>
+    // 1. KÜRESEL HATA YAKALAYICI (KOD ÇÖKERSE EKRANA YAZACAK)
+    window.onerror = function(msg, url, lineNo) {
+        const metin = document.getElementById('durumMetni');
+        if (metin) metin.innerHTML = "<span style='color:#ff3b30; font-size:11px; font-weight:bold;'>SİSTEM ÇÖKTÜ:<br>" + msg + " (Satır: " + lineNo + ")</span>";
+        return false;
+    };
+
+    // 2. FİREBASE KÜTÜPHANE KONTROLÜ
+    if (typeof firebase === 'undefined') {
+        document.getElementById('durumMetni').innerHTML = "<span style='color:#ff3b30; font-size:12px; font-weight:bold;'>FİREBASE ENGELLENDİ!<br>Safari reklam engelleyiciyi kapatın.</span>";
+        throw new Error("Firebase Yüklenemedi");
+    }
+
+    // 3. DOĞRU API ANAHTARI (Orijinal ESP32 Koduyla Birebir Aynı)
+    const firebaseConfig = { 
+        apiKey: "AIzaSyBEhsUAqN4l-ATvLFCjLkBvTaAAXdvF8qM", 
+        databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", 
+        projectId: "led-control-79bc3" 
+    };
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    const db = firebase.database();
+
+    // ALT MENÜ GEÇİŞ FONKSİYONU
+    function sekmeDegistir(sekmeAdi, element) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); 
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + sekmeAdi).classList.add('active'); 
+        element.classList.add('active');
+    }
+
+    // 4. HAFIZA KORUMASI (iOS Güvenlik Engelini Aşma)
+    let sonKaydedilenParlaklik = 65;
+    try {
+        let hafiza = localStorage.getItem("son_parlaklik");
+        if (hafiza) sonKaydedilenParlaklik = parseInt(hafiza);
+    } catch (e) {
+        console.warn("Hafıza erişimi engellendi, varsayılan değer kullanılıyor.");
+    }
+
+    let ledAcikMi = false; 
+
+    // BAĞLANTI DURUMU DİNLEYİCİSİ (Gerçek zamanlı bağlantı testi)
+    db.ref('.info/connected').on('value', function(snap) {
+        const metin = document.getElementById('durumMetni');
+        if (snap.val() === true) {
+            metin.innerHTML = "<span style='color:#30d158;'>BAĞLANTI KURULDU, VERİ BEKLENİYOR...</span>";
+        } else {
+            metin.textContent = "İNTERNET VEYA FİREBASE BEKLENİYOR...";
+        }
+    });
+
+    db.ref('/sonParlaklik').on('value', (snap) => {
+        if (snap.val() && snap.val() > 0) {
+            sonKaydedilenParlaklik = snap.val();
+            try { localStorage.setItem("son_parlaklik", sonKaydedilenParlaklik); } catch(e) {}
+        }
+    });
+
+    function gucKapatAc() {
+        const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
+        const surgusu = document.getElementById('parlaklikSurgusu'); const yuzdeMetin = document.getElementById('parlaklikYuzde');
+        ledAcikMi = !ledAcikMi;
+        let koli = {}; 
+        
+        if (ledAcikMi) {
+            btn.classList.add('active'); surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik;
+            metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
+            koli['/durum'] = "ACIK"; koli['/parlaklik'] = parseInt(sonKaydedilenParlaklik);
+        } else {
+            if (surgusu.value > 0) {
+                sonKaydedilenParlaklik = surgusu.value;
+                try { localStorage.setItem("son_parlaklik", sonKaydedilenParlaklik); } catch(e) {}
+                koli['/sonParlaklik'] = parseInt(sonKaydedilenParlaklik);
+            }
+            btn.classList.remove('active'); surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)";
+            koli['/durum'] = "KAPALI"; koli['/parlaklik'] = 0;
+        }
+        db.ref().update(koli); 
+    }
+
+    function parlaklikDegisti(deger) {
+        deger = parseInt(deger);
+        document.getElementById('parlaklikYuzde').textContent = "%" + deger; 
+        let koli = {};
+        
+        if (deger > 0) {
+            sonKaydedilenParlaklik = deger;
+            try { localStorage.setItem("son_parlaklik", deger); } catch(e) {}
+            koli['/sonParlaklik'] = deger;
+        }
+        
+        if (!ledAcikMi && deger > 0) { 
+            ledAcikMi = true; document.getElementById('gucButonu').classList.add('active'); 
+        } else if (deger == 0) { 
+            ledAcikMi = false; document.getElementById('gucButonu').classList.remove('active'); 
+        }
+        
+        document.getElementById('durumMetni').textContent = ledAcikMi ? "LED'LER AÇIK (%" + deger + ")" : "LED'LER KAPALI (%0)";
+        
+        koli['/durum'] = ledAcikMi ? "ACIK" : "KAPALI";
+        koli['/parlaklik'] = deger;
+        db.ref().update(koli); 
+    }
+
+    function modUygula(yuzde, modAdi) { document.getElementById('parlaklikSurgusu').value = yuzde; parlaklikDegisti(yuzde); }
+    
+    function fadeDegisti(deger) {
+        const metin = deger <= 3 ? "Anlık / Keskin (" + deger + ")" : (deger <= 6 ? "Normal (" + deger + ")" : "Sinematik (" + deger + ")");
+        document.getElementById('fadeMetin').textContent = metin; db.ref('/fadeHizi').set(parseInt(deger));
+    }
+    
+    db.ref('/fadeHizi').on('value', (snap) => {
+        const veri = snap.val();
+        if (veri !== null) {
+            document.getElementById('fadeSurgusu').value = veri;
+            const metin = veri <= 3 ? "Anlık / Keskin (" + veri + ")" : (veri <= 6 ? "Normal (" + veri + ")" : "Sinematik (" + veri + ")");
+            document.getElementById('fadeMetin').textContent = metin;
+        }
+    });
+
+    function alarmSecim(secenekNo) {
+        document.querySelectorAll('.alarm-opt-card').forEach(el => el.classList.remove('selected'));
+        document.getElementById('opt-' + secenekNo).classList.add('selected'); db.ref('/otomasyonlar/alarmModu').set(secenekNo === 1 ? "FADE_IN" : "SMOOTH_BLINK");
+    }
+    function otomasyonKaydet(anahtar, durum) { db.ref('/otomasyonlar/' + anahtar).set(durum); }
+
+    function uykuCemberiniGuncelle(yatma, uyanma) {
+        document.getElementById('yatmaSaati').textContent = yatma; 
+        document.getElementById('uyanmaSaati').textContent = uyanma;
+
+        if (!yatma || !uyanma) return;
+        
+        let [ySaat, yDak] = yatma.toString().split(/[:.]/).map(Number);
+        let [uSaat, uDak] = uyanma.toString().split(/[:.]/).map(Number);
+        
+        let yatmaDakika = (ySaat || 0) * 60 + (yDak || 0);
+        let uyanmaDakika = (uSaat || 0) * 60 + (uDak || 0);
+        
+        if (uyanmaDakika <= yatmaDakika) uyanmaDakika += 24 * 60;
+        
+        let toplamFark = uyanmaDakika - yatmaDakika;
+        let saatFark = Math.floor(toplamFark / 60);
+        let dakFark = toplamFark % 60;
+        
+        if (isNaN(saatFark) || isNaN(dakFark)) {
+            document.getElementById('uykuSuresiMetin').textContent = "Bekleniyor...";
+            document.getElementById('uykuYayi').setAttribute('stroke-dasharray', "0, 251.2");
+        } else {
+            document.getElementById('uykuSuresiMetin').textContent = saatFark + " sa. " + dakFark + " dk.";
+            document.getElementById('uykuYayi').setAttribute('stroke-dasharray', ((toplamFark / (24 * 60)) * 251.2) + ", 251.2");
+        }
+    }
+    uykuCemberiniGuncelle("00:20", "09:00");
+
+    // HER ŞARTTA EKRANI GÜNCELLEYECEK ANA DİNLEYİCİ
+    db.ref('/durum').on('value', (snap) => {
+        const veri = snap.val();
+        const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
+        const surgusu = document.getElementById('parlaklikSurgusu'); const yuzdeMetin = document.getElementById('parlaklikYuzde');
+        
+        if (veri === "ACIK" || veri === true) { 
+            ledAcikMi = true; btn.classList.add('active'); 
+            surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik; 
+            metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
+        } else { 
+            // Boş bile gelse sistemi açık konuma kitlemesin diye her türlü kapalıya alır
+            ledAcikMi = false; btn.classList.remove('active'); 
+            surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)"; 
+        }
+    });
+
+    db.ref('/parlaklik').on('value', (snap) => { 
+        const veri = snap.val();
+        if (veri !== null && veri > 0) { 
+            sonKaydedilenParlaklik = veri;
+            try { localStorage.setItem("son_parlaklik", veri); } catch(e) {}
+            if (ledAcikMi) {
+                document.getElementById('parlaklikSurgusu').value = veri; 
+                document.getElementById('parlaklikYuzde').textContent = "%" + veri; 
+                document.getElementById('durumMetni').textContent = "LED'LER AÇIK (%" + veri + ")";
+            }
+        } 
+    });
+
+    db.ref('/uykuPlani').on('value', (snap) => { const veri = snap.val(); if (veri && veri.yatma && veri.uyanma) { uykuCemberiniGuncelle(veri.yatma, veri.uyanma); } });
+
+    db.ref('/otomasyonlar/alarmModu').on('value', (snap) => {
+        const secilenMod = snap.val();
+        document.querySelectorAll('.alarm-opt-card').forEach(el => el.classList.remove('selected'));
+        if (secilenMod === "SMOOTH_BLINK") { document.getElementById('opt-2').classList.add('selected'); } 
+        else { document.getElementById('opt-1').classList.add('selected'); }
+    });
+
+    let evdeMiyim = true;
+    db.ref('/otomasyonlar/evdeMi').on('value', (snap) => {
+        let durum = snap.val();
+        if (durum === null) durum = true; 
+        evdeMiyim = durum;
+        
+        const badge = document.getElementById('evDurumBadge');
+        if (evdeMiyim) {
+            badge.innerHTML = "🏠 Evde";
+            badge.className = "status-badge evde";
+        } else {
+            badge.innerHTML = "🌍 Dışarıda";
+            badge.className = "status-badge disarida";
+        }
+    });
+
+    function evDurumuTetikle() {
+        db.ref('/otomasyonlar/evdeMi').set(!evdeMiyim);
+    }
+</script>
+</body>
+</html>
