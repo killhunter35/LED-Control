@@ -11,7 +11,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="LED Control">
     
-    <!-- Firebase Kütüphaneleri -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -80,7 +79,7 @@
         <h1>LED Control</h1>
         <div class="header-right">
             <div class="status-badge evde" id="evDurumBadge" onclick="evDurumuTetikle()">🏠 Evde</div>
-            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.5 (UDP Sync Ready)')">⚙️</div>
+            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.6 (Smart Sync)')">⚙️</div>
         </div>
     </header>
 
@@ -132,21 +131,29 @@
 
     <div id="tab-otomasyon" class="tab-content">
         <div class="info-card" style="padding: 12px 16px; margin-bottom: 2px;"><p style="font-size: 12px; color: var(--text-sec); line-height: 1.4;">Bu otomasyonlar iPhone'unuzun arka planındaki <b>Wi-Fi bağlantısını</b> algılayarak LED'leri evde olup olmama durumunuza göre otomatik yönetir.</p></div>
+        
         <div class="automation-list">
             
-            <!-- YENİ: PC SES SENKRONİZASYONU BUTONU -->
-            <div class="shortcut-card">
-                <div class="shortcut-left">
-                    <div class="shortcut-icon icon-red" style="background-color: #ff3b30;">🎵</div>
-                    <div class="shortcut-info">
-                        <h4>PC Ses Senkronizasyonu</h4>
-                        <p>Bilgisayar sesini anlık LED'lere yansıtır</p>
+            <!-- YENİ: DİNAMİK ÖLÇEKLENDİRMELİ UDP KARTI -->
+            <div class="shortcut-card" style="flex-direction: column; align-items: stretch; gap: 12px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <div class="shortcut-left">
+                        <div class="shortcut-icon icon-red">🎵</div>
+                        <div class="shortcut-info">
+                            <h4>PC Ses Senkronizasyonu</h4>
+                            <p>Bilgisayar sesini anlık LED'lere yansıtır</p>
+                        </div>
                     </div>
+                    <label class="switch">
+                        <input type="checkbox" id="udpSwitch" onchange="udpTetikle(this.checked)">
+                        <span class="slider-switch"></span>
+                    </label>
                 </div>
-                <label class="switch">
-                    <input type="checkbox" id="udpSwitch" onchange="udpTetikle(this.checked)">
-                    <span class="slider-switch"></span>
-                </label>
+                <!-- Sadece UDP açıkken görünen Max Parlaklık Sürgüsü -->
+                <div class="slider-container" id="udpSliderContainer" style="display: none; padding-top: 8px; border-top: 1px solid var(--card-border);">
+                    <div class="slider-label"><span>Max Ses Parlaklığı</span><span id="udpMaxYuzde">%100</span></div>
+                    <input type="range" id="udpMaxSurgusu" min="5" max="100" value="100" oninput="udpMaxDegisti(this.value)">
+                </div>
             </div>
 
             <div class="shortcut-card"><div class="shortcut-left"><div class="shortcut-icon icon-blue">🏠</div><div class="shortcut-info"><h4>Eve Geldiğimde Aç</h4><p>Ev Wi-Fi ağına bağlanıldığında</p></div></div><label class="switch"><input type="checkbox" checked onchange="otomasyonKaydet('homeDetect', this.checked)"><span class="slider-switch"></span></label></div>
@@ -189,20 +196,17 @@
 </div>
 
 <script>
-    // 1. KÜRESEL HATA YAKALAYICI (KOD ÇÖKERSE EKRANA YAZACAK)
     window.onerror = function(msg, url, lineNo) {
         const metin = document.getElementById('durumMetni');
         if (metin) metin.innerHTML = "<span style='color:#ff3b30; font-size:11px; font-weight:bold;'>SİSTEM ÇÖKTÜ:<br>" + msg + " (Satır: " + lineNo + ")</span>";
         return false;
     };
 
-    // 2. FİREBASE KÜTÜPHANE KONTROLÜ
     if (typeof firebase === 'undefined') {
         document.getElementById('durumMetni').innerHTML = "<span style='color:#ff3b30; font-size:12px; font-weight:bold;'>FİREBASE ENGELLENDİ!<br>Safari reklam engelleyiciyi kapatın.</span>";
         throw new Error("Firebase Yüklenemedi");
     }
 
-    // 3. DOĞRU API ANAHTARI (Orijinal ESP32 Koduyla Birebir Aynı)
     const firebaseConfig = { 
         apiKey: "AIzaSyBEhsUAqN4l-ATvLFCjLkBvTaAAXdvF8qM", 
         databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", 
@@ -211,7 +215,6 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
 
-    // ALT MENÜ GEÇİŞ FONKSİYONU
     function sekmeDegistir(sekmeAdi, element) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); 
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -219,19 +222,16 @@
         element.classList.add('active');
     }
 
-    // 4. HAFIZA KORUMASI (iOS Güvenlik Engelini Aşma)
     let sonKaydedilenParlaklik = 65;
     try {
         let hafiza = localStorage.getItem("son_parlaklik");
         if (hafiza) sonKaydedilenParlaklik = parseInt(hafiza);
-    } catch (e) {
-        console.warn("Hafıza erişimi engellendi, varsayılan değer kullanılıyor.");
-    }
+    } catch (e) {}
 
     let ledAcikMi = false; 
     let udpAktifMi = false;
+    let udpMaxVal = 100;
 
-    // BAĞLANTI DURUMU DİNLEYİCİSİ (Gerçek zamanlı bağlantı testi)
     db.ref('.info/connected').on('value', function(snap) {
         const metin = document.getElementById('durumMetni');
         if (snap.val() === true) {
@@ -248,18 +248,33 @@
         }
     });
 
-    // UDP DURUM DİNLEYİCİSİ
+    // UDP DURUM & SÜRGÜ DİNLEYİCİLERİ
     db.ref('/otomasyonlar/udpAktif').on('value', (snap) => {
         udpAktifMi = snap.val() === true;
         const udpSwitch = document.getElementById('udpSwitch');
         if (udpSwitch) udpSwitch.checked = udpAktifMi;
+        // Şalter açıkken sürgüyü göster, kapalıyken gizle
+        document.getElementById('udpSliderContainer').style.display = udpAktifMi ? 'flex' : 'none';
     });
 
-    // UDP TETİKLEME FONKSİYONU
+    db.ref('/otomasyonlar/udpMaxParlaklik').on('value', (snap) => {
+        if(snap.val() !== null) {
+            udpMaxVal = snap.val();
+            document.getElementById('udpMaxSurgusu').value = udpMaxVal;
+            document.getElementById('udpMaxYuzde').textContent = "%" + udpMaxVal;
+        }
+    });
+
     function udpTetikle(durum) {
         db.ref('/otomasyonlar/udpAktif').set(durum);
     }
 
+    function udpMaxDegisti(deger) {
+        document.getElementById('udpMaxYuzde').textContent = "%" + deger;
+        db.ref('/otomasyonlar/udpMaxParlaklik').set(parseInt(deger));
+    }
+
+    // MANUEL MÜDAHALE (UDP'yi artık Kapatmıyor)
     function gucKapatAc() {
         const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
         const surgusu = document.getElementById('parlaklikSurgusu'); const yuzdeMetin = document.getElementById('parlaklikYuzde');
@@ -306,10 +321,7 @@
         db.ref().update(koli); 
     }
 
-    function modUygula(yuzde, modAdi) { 
-        document.getElementById('parlaklikSurgusu').value = yuzde; 
-        parlaklikDegisti(yuzde); 
-    }
+    function modUygula(yuzde, modAdi) { document.getElementById('parlaklikSurgusu').value = yuzde; parlaklikDegisti(yuzde); }
     
     function fadeDegisti(deger) {
         const metin = deger <= 3 ? "Anlık / Keskin (" + deger + ")" : (deger <= 6 ? "Normal (" + deger + ")" : "Sinematik (" + deger + ")");
@@ -359,7 +371,6 @@
     }
     uykuCemberiniGuncelle("00:20", "09:00");
 
-    // HER ŞARTTA EKRANI GÜNCELLEYECEK ANA DİNLEYİCİ
     db.ref('/durum').on('value', (snap) => {
         const veri = snap.val();
         const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
