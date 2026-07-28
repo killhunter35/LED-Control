@@ -3,189 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LED Control</title>
+    <title>LED Control V9 - Hume Style</title>
     
     <link rel="apple-touch-icon" href="logo.jpg">
-    
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="LED Control">
     
-    <!-- Firebase Kütüphaneleri -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
         :root {
-            --bg-dark: #000000; --card-bg: #161618; --card-border: #242426;
-            --accent-glow: #ffae00; --accent-soft: rgba(255, 174, 0, 0.15);
-            --text-main: #ffffff; --text-sec: #8e8e93;
-            --ios-blue: #0a84ff; --ios-orange: #ff9f0a; --ios-purple: #bf5af2; --ios-green: #30d158;
+            --accent-orange: #ff6b00;
+            --accent-glow: rgba(255, 107, 0, 0.3);
+            --ios-green: #30d158;
+            --text-main: #ffffff;
+            --text-sec: rgba(255, 255, 255, 0.4);
+            --glass-bg: rgba(20, 20, 25, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-blur: blur(25px);
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; justify-content: center; min-height: 100vh; padding: 10px 12px 85px 12px; }
         
-        .app-container { width: 100%; max-width: 430px; display: flex; flex-direction: column; gap: 12px; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 5px 4px; } .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; } .header-right { display: flex; align-items: center; gap: 8px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
         
-        .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; display: flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.3s; user-select: none; } 
-        .status-badge.evde { background: rgba(48, 209, 88, 0.15); color: var(--ios-green); }
-        .status-badge.disarida { background: rgba(142, 142, 147, 0.15); color: var(--text-sec); }
+        body { background-color: #0b0b0e; color: var(--text-main); overflow: hidden; height: 100vh; width: 100vw; position: relative; }
+
+        /* LÜKS İÇ MEKAN ARKA PLAN (Bulanıklaştırılmış Derinlik Efekti) */
+        #room-bg { 
+            position: absolute; 
+            top: -10%; left: -10%; width: 120%; height: 120%; 
+            background-image: url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=1000&auto=format&fit=crop'); 
+            background-size: cover; 
+            background-position: center; 
+            z-index: -5; 
+            filter: blur(18px) brightness(0.35); 
+            transform: scale(1.05);
+        }
+
+        /* ÜST BİLGİ BARI */
+        .header { position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 25px 20px; z-index: 10; }
+        .header-title h2 { font-size: 13px; font-weight: 400; color: var(--text-sec); letter-spacing: 0.5px; }
+        .header-title h1 { font-size: 20px; font-weight: 600; letter-spacing: 0.3px; color: #fff; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
         
-        .settings-icon { width: 30px; height: 30px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; color: var(--text-main); }
+        .status-badge { font-size: 11px; padding: 6px 12px; border-radius: 20px; font-weight: 500; display: flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.3s; background: var(--glass-bg); border: 1px solid var(--glass-border); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); } 
+        .status-badge.evde { color: var(--accent-orange); border-color: rgba(255, 107, 0, 0.3); }
+        .status-badge.disarida { color: var(--text-sec); }
+        .settings-icon { width: 34px; height: 34px; border-radius: 50%; background: var(--glass-bg); border: 1px solid var(--glass-border); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; }
+
+        /* SWIPE MANTIĞI & SAYFALAR */
+        #swipe-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 5; touch-action: pan-y; }
+        #pages-wrapper { display: flex; width: 200%; height: 100%; transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); transform: translateX(0%); }
+        .page { width: 50%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 95px; padding-left: 55px; padding-right: 55px; }
+
+        /* CETVELLER (RULERS) */
+        .ruler-container { position: absolute; top: 45%; transform: translateY(-50%); width: 45px; height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 15; opacity: 0.4; transition: all 0.2s ease; }
+        .ruler-container.left { left: 2px; } .ruler-container.right { right: 2px; }
+        .ruler-container.active { opacity: 1; transform: translateY(-50%) scale(1.1); }
+        .ruler-tape-wrapper { width: 10px; height: 110px; overflow: hidden; position: relative; border-radius: 4px; }
+        .ruler-tape { position: absolute; top: 0; left: 0; width: 100%; height: 200%; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.6) 0px, rgba(255,255,255,0.6) 2px, transparent 2px, transparent 12px); transform: translateY(0); }
+        .ruler-container.active .ruler-tape { background: repeating-linear-gradient(to bottom, var(--accent-orange) 0px, var(--accent-orange) 2px, transparent 2px, transparent 12px); }
+        .ruler-value { font-size: 11px; font-weight: 600; color: #fff; margin-top: 10px; text-shadow: 0 1px 4px #000; font-family: monospace; }
+
+        /* HUME TARZI CAM KARTLAR */
+        .preset-stack { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-bottom: 15px; }
+        .glass-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border); border-radius: 22px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
+        .glass-card:active { transform: scale(0.97); background: rgba(255,255,255,0.06); }
+        .card-left { display: flex; align-items: center; gap: 15px; }
+        .card-icon { font-size: 20px; }
+        .card-title { font-size: 15px; font-weight: 500; letter-spacing: 0.3px; color: #eee; }
+        .card-radio { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
         
-        .tab-content { display: none; flex-direction: column; gap: 12px; animation: fadeIn 0.25s ease; } .tab-content.active { display: flex; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .glass-card.active { border-color: var(--accent-orange); background: rgba(255, 107, 0, 0.08); box-shadow: 0 0 25px var(--accent-glow); }
+        .glass-card.active .card-title { color: #fff; font-weight: 600; }
+        .glass-card.active .card-radio { border-color: var(--accent-orange); background: var(--accent-orange); }
+        .glass-card.active .card-radio::after { content: '✓'; color: #000; font-weight: bold; font-size: 13px; }
+
+        /* SAYFA 2 - YÖRÜNGE ZAMANLAYICISI & SENKRONİZASYON */
+        .orbit-tracker { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 25px; background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border); border-radius: 28px; padding: 25px 20px; margin-bottom: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
+        .orbit-times { display: flex; justify-content: space-between; width: 100%; padding: 0 10px; }
+        .orbit-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .orbit-col span { font-size: 10px; color: var(--text-sec); letter-spacing: 1.5px; text-transform: uppercase; }
+        .orbit-col h2 { font-size: 20px; font-weight: 400; letter-spacing: 0.5px; color: #fff; }
         
-        .hero-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 22px 18px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
-        .power-btn-outer { width: 135px; height: 135px; border-radius: 50%; background: #08080a; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 3px solid #242426; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .power-btn-outer.active { border-color: var(--accent-glow); box-shadow: 0 0 35px rgba(255, 174, 0, 0.35), inset 0 0 15px rgba(255, 174, 0, 0.2); }
-        .power-icon { font-size: 44px; color: #3a3a3c; transition: color 0.4s ease; } .power-btn-outer.active .power-icon { color: var(--accent-glow); text-shadow: 0 0 15px var(--accent-glow); }
-        .power-status-text { font-size: 13px; font-weight: 600; letter-spacing: 0.8px; color: var(--text-sec); text-align: center; line-height: 1.4; } .power-btn-outer.active + .power-status-text { color: var(--text-main); }
+        .orbit-circle-container { position: relative; width: 160px; height: 160px; }
+        .orbit-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .orbit-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 2.5; stroke-dasharray: 4 6; }
+        .orbit-progress { fill: none; stroke: var(--accent-orange); stroke-width: 4; stroke-linecap: round; filter: drop-shadow(0 0 10px var(--accent-orange)); transition: stroke-dasharray 1s ease; }
+        .orbit-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; }
+        .orbit-center h3 { font-size: 17px; font-weight: 500; color: #fff; }
+        .orbit-center p { font-size: 10px; color: var(--text-sec); margin-top: 3px; text-align: center; }
+
+        /* iOS TARZI NOKTALI SAYFALAMA */
+        .pagination-wrapper { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); background: var(--glass-bg); border: 1px solid var(--glass-border); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 8px 16px; border-radius: 30px; display: flex; gap: 8px; z-index: 20; }
+        .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.25); transition: all 0.3s; }
+        .dot.active { background: var(--accent-orange); transform: scale(1.3); box-shadow: 0 0 8px var(--accent-orange); }
+
+        /* AYARLAR - LOG PANELİ */
+        #log-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 60%; background: rgba(12, 12, 16, 0.92); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border-top: 1px solid var(--glass-border); border-radius: 30px 30px 0 0; z-index: 100; transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 25px; display: flex; flex-direction: column; box-shadow: 0 -20px 40px rgba(0,0,0,0.6); }
+        #log-panel.open { bottom: 0; }
+        .log-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin-bottom: 15px; }
+        .log-header h3 { font-size: 16px; font-weight: 600; color: #fff; }
+        .close-btn { background: rgba(255,255,255,0.08); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; color: #fff; }
+        .log-list { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .log-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #ccc; background: rgba(255,255,255,0.02); padding: 12px 15px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.04); }
+        .log-time { font-size: 11px; color: var(--text-sec); font-family: monospace; }
         
-        .slider-container { width: 100%; display: flex; flex-direction: column; gap: 6px; } .slider-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-sec); font-weight: 500; }
-        input[type=range] { -webkit-appearance: none; width: 100%; height: 6px; background: #242426; border-radius: 5px; outline: none; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #ffffff; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.5); transition: transform 0.1s; }
-        input[type=range]:active::-webkit-slider-thumb { transform: scale(1.25); background: var(--accent-glow); box-shadow: 0 0 15px var(--accent-glow); }
-        
-        .presets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
-        .preset-btn { background: #08080a; border: 1px solid var(--card-border); color: var(--text-main); padding: 12px 4px; border-radius: 14px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: all 0.2s; }
-        .preset-btn:active { border-color: var(--accent-glow); background: var(--accent-soft); } .preset-btn span { font-size: 16px; }
-        
-        .info-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 10px; } .card-header { font-size: 11px; color: var(--text-sec); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .sleep-circle-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 20px 16px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
-        .sleep-times-header { display: flex; justify-content: space-between; width: 100%; padding: 0 10px; } .time-col { display: flex; flex-direction: column; align-items: center; gap: 2px; } .time-col span { font-size: 11px; color: var(--text-sec); font-weight: 600; display: flex; align-items: center; gap: 4px; } .time-col h2 { font-size: 20px; font-weight: 700; }
-        .circle-container { position: relative; width: 180px; height: 180px; display: flex; justify-content: center; align-items: center; } .circle-svg { width: 100%; height: 100%; transform: rotate(-90deg); } .circle-bg { fill: none; stroke: #242426; stroke-width: 14; } .circle-progress { fill: none; stroke: var(--accent-glow); stroke-width: 14; stroke-linecap: round; transition: stroke-dasharray 0.8s ease; } .circle-center-content { position: absolute; display: flex; flex-direction: column; align-items: center; text-align: center; } .circle-inner-text { font-size: 18px; font-weight: 700; color: var(--text-main); } .circle-inner-sub { font-size: 10px; color: var(--text-sec); margin-top: 2px; }
-        
-        .alarm-options { display: flex; flex-direction: column; gap: 8px; width: 100%; } .alarm-opt-card { background: #08080a; border: 1px solid var(--card-border); border-radius: 14px; padding: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: 0.2s; } .alarm-opt-card.selected { border-color: var(--accent-glow); background: rgba(255, 174, 0, 0.08); } .alarm-opt-text h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; } .alarm-opt-text p { font-size: 11px; color: var(--text-sec); } .check-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--text-sec); display: flex; align-items: center; justify-content: center; } .alarm-opt-card.selected .check-circle { border-color: var(--accent-glow); background: var(--accent-glow); } .alarm-opt-card.selected .check-circle::after { content: "✓"; font-size: 11px; color: #000; font-weight: bold; }
-        
-        .automation-list { display: flex; flex-direction: column; gap: 10px; } .shortcut-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 14px; display: flex; align-items: center; justify-content: space-between; } .shortcut-left { display: flex; align-items: center; gap: 12px; } .shortcut-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; flex-shrink: 0; } .icon-blue { background-color: var(--ios-blue); } .icon-orange { background-color: var(--ios-orange); } .icon-purple { background-color: var(--ios-purple); } .shortcut-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; } .shortcut-info p { font-size: 11px; color: var(--text-sec); }
-        
-        .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; } .switch input { opacity: 0; width: 0; height: 0; } .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #39393d; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 24px; } .slider-switch:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); } input:checked + .slider-switch { background-color: var(--ios-green); } input:checked + .slider-switch:before { transform: translateX(18px); }
-        
-        .floating-nav-wrapper { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 360px; z-index: 1000; }
-        .floating-nav { background: rgba(26, 26, 30, 0.85); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 35px; padding: 6px 15px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--text-sec); font-size: 10px; font-weight: 500; cursor: pointer; padding: 6px 14px; border-radius: 22px; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
-        .nav-item.active { color: var(--accent-glow); background: rgba(255, 174, 0, 0.12); font-weight: 600; transform: translateY(-2px); }
-        .nav-icon { width: 24px; height: 24px; stroke: currentColor; fill: none; transition: all 0.25s; }
-        .nav-item.active .icon-accent { fill: var(--accent-glow); stroke: var(--accent-glow); }
-        .nav-item.active .icon-accent-text { fill: var(--accent-glow); }
+        /* PC SENKRONİZASYONU KARTI */
+        .sync-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border); border-radius: 22px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
+        .sync-info h4 { font-size: 14px; margin-bottom: 3px; color: #fff; font-weight: 500; }
+        .sync-info p { font-size: 11px; color: var(--text-sec); }
+        .switch { position: relative; display: inline-block; width: 44px; height: 25px; flex-shrink: 0; } .switch input { opacity: 0; width: 0; height: 0; } .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 25px; } .slider-switch:before { position: absolute; content: ""; height: 19px; width: 19px; left: 2px; bottom: 2px; background-color: white; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.4); } input:checked + .slider-switch { background-color: var(--accent-orange); border-color: var(--accent-orange); } input:checked + .slider-switch:before { transform: translateX(19px); }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <header class="header">
-        <h1>LED Control</h1>
-        <div class="header-right">
-            <div class="status-badge evde" id="evDurumBadge" onclick="evDurumuTetikle()">🏠 Evde</div>
-            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.4 (Bulletproof)')">⚙️</div>
-        </div>
-    </header>
+<!-- ARKA PLAN -->
+<div id="room-bg"></div>
 
-    <div id="tab-anasayfa" class="tab-content active">
-        <div class="hero-card">
-            <div class="power-btn-outer" id="gucButonu" onclick="gucKapatAc()"><div class="power-icon">⏻</div></div>
-            <div class="power-status-text" id="durumMetni">SİSTEM BAŞLATILIYOR...</div>
-            <div class="slider-container">
-                <div class="slider-label"><span>Parlaklık</span><span id="parlaklikYuzde">%0</span></div>
-                <input type="range" id="parlaklikSurgusu" min="1" max="100" value="0" oninput="parlaklikDegisti(this.value)">
-            </div>
-            <div class="presets-grid">
-                <button class="preset-btn" onclick="modUygula(15, 'Gece Loş Modu')"><span>🌙</span>Loş Gece</button>
-                <button class="preset-btn" onclick="modUygula(10, 'Sinema Modu')"><span>🍿</span>Sinema</button>
-                <button class="preset-btn" onclick="modUygula(100, 'Maksimum Güç')"><span>☀️</span>Tam Güç</button>
-            </div>
-        </div>
-        <div class="info-card">
-            <div class="card-header">🎚️ GEÇİŞ YUMUŞAKLIĞI (FADE HIZI)</div>
-            <div class="slider-container" style="margin-top: 2px;">
-                <div class="slider-label"><span>Tepki Süresi</span><span id="fadeMetin">Anlık / Keskin (3)</span></div>
-                <input type="range" id="fadeSurgusu" min="1" max="10" value="3" oninput="fadeDegisti(this.value)">
-            </div>
-        </div>
+<header class="header">
+    <div class="header-title">
+        <h2>Smart Home</h2>
+        <h1>Yatak Odası</h1>
     </div>
+    <div class="header-right">
+        <div class="status-badge evde" id="evDurumBadge" onclick="evDurumuTetikle()">🏠 Evde</div>
+        <div class="settings-icon" onclick="logPanelAc()">⚙️</div>
+    </div>
+</header>
 
-    <div id="tab-zamanlayici" class="tab-content">
-        <div class="sleep-circle-card">
-            <div class="sleep-times-header">
-                <div class="time-col"><span>🛏️ YATMA</span><h2 id="yatmaSaati">00:20</h2></div>
-                <div class="time-col"><span>⏰ UYANMA</span><h2 id="uyanmaSaati">09:00</h2></div>
-            </div>
-            <div class="circle-container">
-                <svg class="circle-svg" viewBox="0 0 100 100">
-                    <circle class="circle-bg" cx="50" cy="50" r="40"></circle>
-                    <circle class="circle-progress" id="uykuYayi" cx="50" cy="50" r="40" stroke-dasharray="90, 251.2"></circle>
-                </svg>
-                <div class="circle-center-content"><div class="circle-inner-text" id="uykuSuresiMetin">8 sa. 40 dk.</div><div class="circle-inner-sub">iOS Uyku Planı<br>Senkronize</div></div>
-            </div>
-            <div style="width: 100%; margin-top: 4px;">
-                <div class="card-header" style="margin-bottom: 8px;">📲 UYANDIRMA MODU SEÇİMİ</div>
-                <div class="alarm-options">
-                    <div class="alarm-opt-card selected" id="opt-1" onclick="alarmSecim(1)"><div class="alarm-opt-text"><h4>🌅 Gün Doğumu (Yavaş Uyandırma)</h4><p>Alarmdan 5 dk önce %1'den %100'e yavaşça açılır.</p></div><div class="check-circle"></div></div>
-                    <div class="alarm-opt-card" id="opt-2" onclick="alarmSecim(2)"><div class="alarm-opt-text"><h4>✨ Smooth Flaşı (Yanıp Sönme)</h4><p>Alarm çaldığı an pürüzsüzce yanıp sönerek uyarır.</p></div><div class="check-circle"></div></div>
+<!-- CETVELLER -->
+<div class="ruler-container left" id="fadeRuler">
+    <div class="ruler-tape-wrapper">
+        <div class="ruler-tape" id="fadeTape"></div>
+    </div>
+    <div class="ruler-value"><span id="fadeValText">3</span>s</div>
+</div>
+<div class="ruler-container right" id="brightRuler">
+    <div class="ruler-tape-wrapper">
+        <div class="ruler-tape" id="brightTape"></div>
+    </div>
+    <div class="ruler-value">%<span id="brightValText">0</span></div>
+</div>
+
+<div id="swipe-container">
+    <div id="pages-wrapper">
+        <!-- SAYFA 1: ANA KONTROL -->
+        <div class="page" id="page-1">
+            <div class="preset-stack">
+                <div class="glass-card" id="card-yatma" onclick="modSec('yatma', 15)">
+                    <div class="card-left"><span class="card-icon">🛏️</span><span class="card-title">Yatma Modu</span></div>
+                    <div class="card-radio"></div>
+                </div>
+                <div class="glass-card" id="card-sinema" onclick="modSec('sinema', 10)">
+                    <div class="card-left"><span class="card-icon">🍿</span><span class="card-title">Sinema Modu</span></div>
+                    <div class="card-radio"></div>
+                </div>
+                <div class="glass-card" id="card-tamguc" onclick="modSec('tamguc', 100)">
+                    <div class="card-left"><span class="card-icon">☀️</span><span class="card-title">Tam Güç</span></div>
+                    <div class="card-radio"></div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div id="tab-otomasyon" class="tab-content">
-        <div class="info-card" style="padding: 12px 16px; margin-bottom: 2px;"><p style="font-size: 12px; color: var(--text-sec); line-height: 1.4;">Bu otomasyonlar iPhone'unuzun arka planındaki <b>Wi-Fi bağlantısını</b> algılayarak LED'leri evde olup olmama durumunuza göre otomatik yönetir.</p></div>
-        <div class="automation-list">
-            <div class="shortcut-card"><div class="shortcut-left"><div class="shortcut-icon icon-blue">🏠</div><div class="shortcut-info"><h4>Eve Geldiğimde Aç</h4><p>Ev Wi-Fi ağına bağlanıldığında</p></div></div><label class="switch"><input type="checkbox" checked onchange="otomasyonKaydet('homeDetect', this.checked)"><span class="slider-switch"></span></label></div>
-            <div class="shortcut-card"><div class="shortcut-left"><div class="shortcut-icon icon-orange">🚶</div><div class="shortcut-info"><h4>Evden Çıktığımda Kapat</h4><p>Ev Wi-Fi ağından kopulduğunda</p></div></div><label class="switch"><input type="checkbox" checked onchange="otomasyonKaydet('outDetect', this.checked)"><span class="slider-switch"></span></label></div>
-            <div class="shortcut-card"><div class="shortcut-left"><div class="shortcut-icon icon-purple">🔔</div><div class="shortcut-info"><h4>Otomasyon Bildirimleri</h4><p>Giriş/Çıkış yapıldığında ekrana bildir</p></div></div><label class="switch"><input type="checkbox" checked onchange="otomasyonKaydet('notif', this.checked)"><span class="slider-switch"></span></label></div>
+        <!-- SAYFA 2: ZAMANLAYICI & PC SENKRONİZASYONU -->
+        <div class="page" id="page-2">
+            <div class="orbit-tracker">
+                <div class="orbit-times">
+                    <div class="orbit-col"><span>YATMA</span><h2 id="yatmaSaati">00:20</h2></div>
+                    <div class="orbit-col"><span>UYANMA</span><h2 id="uyanmaSaati">09:00</h2></div>
+                </div>
+                <div class="orbit-circle-container">
+                    <svg class="orbit-svg" viewBox="0 0 120 120">
+                        <circle class="orbit-bg" cx="60" cy="60" r="50"></circle>
+                        <circle class="orbit-progress" id="orbitYay" cx="60" cy="60" r="50" stroke-dasharray="0, 314.15"></circle>
+                    </svg>
+                    <div class="orbit-center">
+                        <h3 id="uykuSuresiMetin">8s 40d</h3>
+                        <p>Sistem<br>Senkronize</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PC SES SENKRONİZASYONU -->
+            <div class="sync-card">
+                <div class="sync-info">
+                    <h4>PC Ses Senkronizasyonu</h4>
+                    <p>Medyadan gelen sesi ağ üzerinden dinler.</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="udpSwitch" onchange="udpTetikle(this.checked)">
+                    <span class="slider-switch"></span>
+                </label>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="floating-nav-wrapper">
-    <nav class="floating-nav">
-        <div class="nav-item active" onclick="sekmeDegistir('anasayfa', this)">
-            <svg viewBox="0 0 24 24" class="nav-icon" stroke-width="1.8" stroke-linejoin="round">
-                <path d="M3 10L12 2l9 8v11a1 1 0 0 1-1 1h-6v-8h-4v8H4a1 1 0 0 1-1-1V10z" />
-                <path d="M10 13l4-1v9l-4-1v-7z" class="icon-accent" fill="currentColor" stroke="none"/>
-            </svg>
-            <span>Ana Sayfa</span>
-        </div>
-        <div class="nav-item" onclick="sekmeDegistir('zamanlayici', this)">
-            <svg viewBox="0 0 24 24" class="nav-icon" stroke-width="1.8">
-                <rect x="3" y="6" width="18" height="13" rx="3" />
-                <path d="M8 3h8M7 19v2M17 19v2" stroke-linecap="round"/>
-                <text x="12" y="15" font-size="6.5" font-family="monospace" font-weight="bold" text-anchor="middle" class="icon-accent-text" fill="currentColor" stroke="none">0:00</text>
-            </svg>
-            <span>Zamanlayıcı</span>
-        </div>
-        <div class="nav-item" onclick="sekmeDegistir('otomasyon', this)">
-            <svg viewBox="0 0 24 24" class="nav-icon" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="18" width="20" height="4" rx="1.5" />
-                <circle cx="6" cy="20" r="0.8" fill="currentColor" stroke="none"/><circle cx="10" cy="20" r="0.8" fill="currentColor" stroke="none"/><circle cx="14" cy="20" r="0.8" fill="currentColor" stroke="none"/><circle cx="18" cy="20" r="0.8" fill="currentColor" stroke="none"/>
-                <path d="M6 18v-7l5-4h4" />
-                <circle cx="6" cy="14" r="1.5" class="icon-accent" fill="currentColor" stroke="none"/>
-                <circle cx="11" cy="7" r="1.5" class="icon-accent" fill="currentColor" stroke="none"/>
-                <path d="M15 5v3.5m-1.5 0h3m-2.5 1.5v1.5m2-1.5v1.5" class="icon-accent" stroke-width="1.4"/>
-                <rect x="14" y="12" width="4" height="5" rx="0.5" />
-            </svg>
-            <span>Otomasyon</span>
-        </div>
-    </nav>
+<div class="pagination-wrapper">
+    <div class="dot active" id="dot-1"></div>
+    <div class="dot" id="dot-2"></div>
+</div>
+
+<!-- AYARLAR & LOG PANELİ -->
+<div id="log-panel">
+    <div class="log-header">
+        <h3>Sistem Kayıtları</h3>
+        <div class="close-btn" onclick="logPanelKapat()">✕</div>
+    </div>
+    <div class="log-list" id="logList"></div>
 </div>
 
 <script>
-    // 1. KÜRESEL HATA YAKALAYICI (KOD ÇÖKERSE EKRANA YAZACAK)
-    window.onerror = function(msg, url, lineNo) {
-        const metin = document.getElementById('durumMetni');
-        if (metin) metin.innerHTML = "<span style='color:#ff3b30; font-size:11px; font-weight:bold;'>SİSTEM ÇÖKTÜ:<br>" + msg + " (Satır: " + lineNo + ")</span>";
-        return false;
-    };
-
-    // 2. FİREBASE KÜTÜPHANE KONTROLÜ
-    if (typeof firebase === 'undefined') {
-        document.getElementById('durumMetni').innerHTML = "<span style='color:#ff3b30; font-size:12px; font-weight:bold;'>FİREBASE ENGELLENDİ!<br>Safari reklam engelleyiciyi kapatın.</span>";
-        throw new Error("Firebase Yüklenemedi");
-    }
-
-    // 3. DOĞRU API ANAHTARI (Orijinal ESP32 Koduyla Birebir Aynı)
+    // --- 1. FIREBASE BAĞLANTISI ---
     const firebaseConfig = { 
         apiKey: "AIzaSyBEhsUAqN4l-ATvLFCjLkBvTaAAXdvF8qM", 
         databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", 
@@ -194,196 +225,176 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
 
-    // ALT MENÜ GEÇİŞ FONKSİYONU
-    function sekmeDegistir(sekmeAdi, element) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); 
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        document.getElementById('tab-' + sekmeAdi).classList.add('active'); 
-        element.classList.add('active');
-    }
-
-    // 4. HAFIZA KORUMASI (iOS Güvenlik Engelini Aşma)
-    let sonKaydedilenParlaklik = 65;
-    try {
-        let hafiza = localStorage.getItem("son_parlaklik");
-        if (hafiza) sonKaydedilenParlaklik = parseInt(hafiza);
-    } catch (e) {
-        console.warn("Hafıza erişimi engellendi, varsayılan değer kullanılıyor.");
-    }
-
-    let ledAcikMi = false; 
-
-    // BAĞLANTI DURUMU DİNLEYİCİSİ (Gerçek zamanlı bağlantı testi)
-    db.ref('.info/connected').on('value', function(snap) {
-        const metin = document.getElementById('durumMetni');
-        if (snap.val() === true) {
-            metin.innerHTML = "<span style='color:#30d158;'>BAĞLANTI KURULDU, VERİ BEKLENİYOR...</span>";
-        } else {
-            metin.textContent = "İNTERNET VEYA FİREBASE BEKLENİYOR...";
-        }
-    });
-
-    db.ref('/sonParlaklik').on('value', (snap) => {
-        if (snap.val() && snap.val() > 0) {
-            sonKaydedilenParlaklik = snap.val();
-            try { localStorage.setItem("son_parlaklik", sonKaydedilenParlaklik); } catch(e) {}
-        }
-    });
-
-    function gucKapatAc() {
-        const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
-        const surgusu = document.getElementById('parlaklikSurgusu'); const yuzdeMetin = document.getElementById('parlaklikYuzde');
-        ledAcikMi = !ledAcikMi;
-        let koli = {}; 
+    // --- 2. LOG SİSTEMİ ---
+    let actionLogs = [];
+    function addLog(mesaj) {
+        const now = new Date();
+        const saat = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+        actionLogs.unshift({ msj: mesaj, zaman: saat });
+        if (actionLogs.length > 5) actionLogs.pop(); 
         
-        if (ledAcikMi) {
-            btn.classList.add('active'); surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik;
-            metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
-            koli['/durum'] = "ACIK"; koli['/parlaklik'] = parseInt(sonKaydedilenParlaklik);
-        } else {
-            if (surgusu.value > 0) {
-                sonKaydedilenParlaklik = surgusu.value;
-                try { localStorage.setItem("son_parlaklik", sonKaydedilenParlaklik); } catch(e) {}
-                koli['/sonParlaklik'] = parseInt(sonKaydedilenParlaklik);
+        const logHtml = actionLogs.map(log => 
+            `<div class="log-item"><span>${log.msj}</span><span class="log-time">${log.zaman}</span></div>`
+        ).join("");
+        document.getElementById('logList').innerHTML = logHtml || `<div class="log-item" style="justify-content:center; color:#888;">Kayıt bulunamadı.</div>`;
+    }
+    function logPanelAc() { document.getElementById('log-panel').classList.add('open'); }
+    function logPanelKapat() { document.getElementById('log-panel').classList.remove('open'); }
+    addLog("Sistem Başlatıldı");
+
+    // --- 3. SWIPE MANTIĞI ---
+    const swipeContainer = document.getElementById('swipe-container');
+    const pagesWrapper = document.getElementById('pages-wrapper');
+    const dot1 = document.getElementById('dot-1');
+    const dot2 = document.getElementById('dot-2');
+    let touchStartX = 0; let touchEndX = 0; let currentPage = 0;
+
+    swipeContainer.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
+    swipeContainer.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        if (touchEndX < touchStartX - 50) { currentPage = 1; } 
+        if (touchEndX > touchStartX + 50) { currentPage = 0; } 
+        
+        pagesWrapper.style.transform = `translateX(-${currentPage * 50}%)`;
+        if (currentPage === 0) { dot1.classList.add('active'); dot2.classList.remove('active'); } 
+        else { dot2.classList.add('active'); dot1.classList.remove('active'); }
+    }, {passive: true});
+
+    // --- 4. CETVELLER ---
+    let b_val = 0; 
+    let f_val = 3; 
+
+    function initRuler(rulerId, tapeId, valTextId, isBrightness) {
+        const ruler = document.getElementById(rulerId);
+        const tape = document.getElementById(tapeId);
+        const valText = document.getElementById(valTextId);
+        let startY = 0; let startVal = 0; let tapePos = 0;
+
+        ruler.addEventListener('touchstart', e => {
+            startY = e.touches[0].clientY;
+            startVal = isBrightness ? b_val : f_val;
+            ruler.classList.add('active');
+        }, {passive: false});
+
+        ruler.addEventListener('touchmove', e => {
+            e.preventDefault(); 
+            let delta = startY - e.touches[0].clientY; 
+            
+            tapePos -= delta * 0.8;
+            if (tapePos <= -100) tapePos = 0;
+            if (tapePos >= 100) tapePos = 0;
+            tape.style.transform = `translateY(${tapePos}%)`; 
+
+            let calcVal = startVal + (isBrightness ? Math.round(delta / 2.5) : Math.round(delta / 12));
+            calcVal = Math.max(isBrightness ? 0 : 1, Math.min(isBrightness ? 100 : 10, calcVal)); 
+            
+            if (isBrightness) { b_val = calcVal; valText.innerText = b_val; } 
+            else { f_val = calcVal; valText.innerText = f_val; }
+            
+        }, {passive: false});
+
+        ruler.addEventListener('touchend', e => {
+            ruler.classList.remove('active');
+            if (isBrightness) {
+                if(b_val > 0) {
+                    db.ref().update({'/durum': 'ACIK', '/parlaklik': b_val, '/sonParlaklik': b_val});
+                    addLog(`Parlaklık %${b_val} ayarlandı`);
+                    if(document.getElementById('udpSwitch').checked) udpTetikle(false); 
+                } else {
+                    db.ref().update({'/durum': 'KAPALI', '/parlaklik': 0});
+                    addLog("LED'ler Kapatıldı");
+                }
+                kartlariGuncelle();
+            } else {
+                db.ref('/fadeHizi').set(f_val);
+                addLog(`Geçiş hızı ${f_val} sn yapıldı`);
             }
-            btn.classList.remove('active'); surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)";
-            koli['/durum'] = "KAPALI"; koli['/parlaklik'] = 0;
-        }
-        db.ref().update(koli); 
+        });
+    }
+    initRuler('brightRuler', 'brightTape', 'brightValText', true);
+    initRuler('fadeRuler', 'fadeTape', 'fadeValText', false);
+
+    // --- 5. KART KONTROLLERİ ---
+    function modSec(kartId, deger) {
+        b_val = deger;
+        document.getElementById('brightValText').innerText = b_val;
+        db.ref().update({'/durum': 'ACIK', '/parlaklik': b_val, '/sonParlaklik': b_val});
+        addLog(`${kartId.toUpperCase()} Modu aktif edildi`);
+        if(document.getElementById('udpSwitch').checked) udpTetikle(false); 
+        kartlariGuncelle();
     }
 
-    function parlaklikDegisti(deger) {
-        deger = parseInt(deger);
-        document.getElementById('parlaklikYuzde').textContent = "%" + deger; 
-        let koli = {};
-        
-        if (deger > 0) {
-            sonKaydedilenParlaklik = deger;
-            try { localStorage.setItem("son_parlaklik", deger); } catch(e) {}
-            koli['/sonParlaklik'] = deger;
-        }
-        
-        if (!ledAcikMi && deger > 0) { 
-            ledAcikMi = true; document.getElementById('gucButonu').classList.add('active'); 
-        } else if (deger == 0) { 
-            ledAcikMi = false; document.getElementById('gucButonu').classList.remove('active'); 
-        }
-        
-        document.getElementById('durumMetni').textContent = ledAcikMi ? "LED'LER AÇIK (%" + deger + ")" : "LED'LER KAPALI (%0)";
-        
-        koli['/durum'] = ledAcikMi ? "ACIK" : "KAPALI";
-        koli['/parlaklik'] = deger;
-        db.ref().update(koli); 
+    function kartlariGuncelle() {
+        document.querySelectorAll('.glass-card').forEach(el => el.classList.remove('active'));
+        if (b_val == 15) document.getElementById('card-yatma').classList.add('active');
+        if (b_val == 10) document.getElementById('card-sinema').classList.add('active');
+        if (b_val == 100) document.getElementById('card-tamguc').classList.add('active');
     }
 
-    function modUygula(yuzde, modAdi) { document.getElementById('parlaklikSurgusu').value = yuzde; parlaklikDegisti(yuzde); }
-    
-    function fadeDegisti(deger) {
-        const metin = deger <= 3 ? "Anlık / Keskin (" + deger + ")" : (deger <= 6 ? "Normal (" + deger + ")" : "Sinematik (" + deger + ")");
-        document.getElementById('fadeMetin').textContent = metin; db.ref('/fadeHizi').set(parseInt(deger));
-    }
-    
-    db.ref('/fadeHizi').on('value', (snap) => {
-        const veri = snap.val();
-        if (veri !== null) {
-            document.getElementById('fadeSurgusu').value = veri;
-            const metin = veri <= 3 ? "Anlık / Keskin (" + veri + ")" : (veri <= 6 ? "Normal (" + veri + ")" : "Sinematik (" + veri + ")");
-            document.getElementById('fadeMetin').textContent = metin;
-        }
-    });
-
-    function alarmSecim(secenekNo) {
-        document.querySelectorAll('.alarm-opt-card').forEach(el => el.classList.remove('selected'));
-        document.getElementById('opt-' + secenekNo).classList.add('selected'); db.ref('/otomasyonlar/alarmModu').set(secenekNo === 1 ? "FADE_IN" : "SMOOTH_BLINK");
-    }
-    function otomasyonKaydet(anahtar, durum) { db.ref('/otomasyonlar/' + anahtar).set(durum); }
-
-    function uykuCemberiniGuncelle(yatma, uyanma) {
+    // --- 6. YÖRÜNGE ZAMANLAYICISI ---
+    function uykuOrbitGuncelle(yatma, uyanma) {
         document.getElementById('yatmaSaati').textContent = yatma; 
         document.getElementById('uyanmaSaati').textContent = uyanma;
-
         if (!yatma || !uyanma) return;
-        
         let [ySaat, yDak] = yatma.toString().split(/[:.]/).map(Number);
         let [uSaat, uDak] = uyanma.toString().split(/[:.]/).map(Number);
         
-        let yatmaDakika = (ySaat || 0) * 60 + (yDak || 0);
-        let uyanmaDakika = (uSaat || 0) * 60 + (uDak || 0);
+        let yatmaDk = (ySaat || 0) * 60 + (yDak || 0);
+        let uyanmaDk = (uSaat || 0) * 60 + (uDak || 0);
+        if (uyanmaDk <= yatmaDk) uyanmaDk += 24 * 60;
         
-        if (uyanmaDakika <= yatmaDakika) uyanmaDakika += 24 * 60;
-        
-        let toplamFark = uyanmaDakika - yatmaDakika;
-        let saatFark = Math.floor(toplamFark / 60);
-        let dakFark = toplamFark % 60;
-        
-        if (isNaN(saatFark) || isNaN(dakFark)) {
-            document.getElementById('uykuSuresiMetin').textContent = "Bekleniyor...";
-            document.getElementById('uykuYayi').setAttribute('stroke-dasharray', "0, 251.2");
-        } else {
-            document.getElementById('uykuSuresiMetin').textContent = saatFark + " sa. " + dakFark + " dk.";
-            document.getElementById('uykuYayi').setAttribute('stroke-dasharray', ((toplamFark / (24 * 60)) * 251.2) + ", 251.2");
-        }
+        let toplamDk = uyanmaDk - yatmaDk;
+        document.getElementById('uykuSuresiMetin').textContent = `${Math.floor(toplamDk / 60)}s ${toplamDk % 60}d`;
+        document.getElementById('orbitYay').setAttribute('stroke-dasharray', `${(toplamDk / (24 * 60)) * 314.15}, 314.15`);
     }
-    uykuCemberiniGuncelle("00:20", "09:00");
 
-    // HER ŞARTTA EKRANI GÜNCELLEYECEK ANA DİNLEYİCİ
-    db.ref('/durum').on('value', (snap) => {
-        const veri = snap.val();
-        const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
-        const surgusu = document.getElementById('parlaklikSurgusu'); const yuzdeMetin = document.getElementById('parlaklikYuzde');
-        
-        if (veri === "ACIK" || veri === true) { 
-            ledAcikMi = true; btn.classList.add('active'); 
-            surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik; 
-            metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
-        } else { 
-            // Boş bile gelse sistemi açık konuma kitlemesin diye her türlü kapalıya alır
-            ledAcikMi = false; btn.classList.remove('active'); 
-            surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)"; 
+    // --- 7. VERİ DİNLEME ---
+    db.ref('/durum').on('value', snap => {
+        if(snap.val() !== "ACIK") { 
+            b_val = 0; document.getElementById('brightValText').innerText = 0; 
+            kartlariGuncelle(); 
         }
     });
 
-    db.ref('/parlaklik').on('value', (snap) => { 
-        const veri = snap.val();
-        if (veri !== null && veri > 0) { 
-            sonKaydedilenParlaklik = veri;
-            try { localStorage.setItem("son_parlaklik", veri); } catch(e) {}
-            if (ledAcikMi) {
-                document.getElementById('parlaklikSurgusu').value = veri; 
-                document.getElementById('parlaklikYuzde').textContent = "%" + veri; 
-                document.getElementById('durumMetni').textContent = "LED'LER AÇIK (%" + veri + ")";
-            }
-        } 
+    db.ref('/parlaklik').on('value', snap => {
+        let val = snap.val();
+        if(val !== null && val > 0) {
+            b_val = val; document.getElementById('brightValText').innerText = val;
+            kartlariGuncelle();
+        }
     });
 
-    db.ref('/uykuPlani').on('value', (snap) => { const veri = snap.val(); if (veri && veri.yatma && veri.uyanma) { uykuCemberiniGuncelle(veri.yatma, veri.uyanma); } });
+    db.ref('/fadeHizi').on('value', snap => {
+        if(snap.val() !== null) { f_val = snap.val(); document.getElementById('fadeValText').innerText = f_val; }
+    });
 
-    db.ref('/otomasyonlar/alarmModu').on('value', (snap) => {
-        const secilenMod = snap.val();
-        document.querySelectorAll('.alarm-opt-card').forEach(el => el.classList.remove('selected'));
-        if (secilenMod === "SMOOTH_BLINK") { document.getElementById('opt-2').classList.add('selected'); } 
-        else { document.getElementById('opt-1').classList.add('selected'); }
+    db.ref('/uykuPlani').on('value', snap => {
+        const v = snap.val(); if (v && v.yatma && v.uyanma) uykuOrbitGuncelle(v.yatma, v.uyanma);
     });
 
     let evdeMiyim = true;
-    db.ref('/otomasyonlar/evdeMi').on('value', (snap) => {
-        let durum = snap.val();
-        if (durum === null) durum = true; 
-        evdeMiyim = durum;
-        
+    db.ref('/otomasyonlar/evdeMi').on('value', snap => {
+        evdeMiyim = snap.val() === null ? true : snap.val();
         const badge = document.getElementById('evDurumBadge');
-        if (evdeMiyim) {
-            badge.innerHTML = "🏠 Evde";
-            badge.className = "status-badge evde";
-        } else {
-            badge.innerHTML = "🌍 Dışarıda";
-            badge.className = "status-badge disarida";
-        }
+        if (evdeMiyim) { badge.innerHTML = "🏠 Evde"; badge.className = "status-badge evde"; } 
+        else { badge.innerHTML = "🌍 Dışarıda"; badge.className = "status-badge disarida"; }
     });
 
     function evDurumuTetikle() {
         db.ref('/otomasyonlar/evdeMi').set(!evdeMiyim);
+        addLog(`Ev durumu '${!evdeMiyim ? 'Evde' : 'Dışarıda'}' yapıldı`);
     }
+
+    function udpTetikle(durum) {
+        document.getElementById('udpSwitch').checked = durum;
+        if(durum) { addLog("PC Ses Senkronizasyonu Aktif"); db.ref('/otomasyonlar/udpAktif').set(true); } 
+        else { addLog("PC Ses Senkronizasyonu Kapalı"); db.ref('/otomasyonlar/udpAktif').set(false); }
+    }
+    
+    db.ref('/otomasyonlar/udpAktif').on('value', snap => {
+        document.getElementById('udpSwitch').checked = snap.val() === true;
+    });
+
 </script>
 </body>
 </html>
