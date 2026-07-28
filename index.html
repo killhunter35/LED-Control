@@ -21,6 +21,7 @@
             --accent-glow: #ffae00; --accent-soft: rgba(255, 174, 0, 0.15);
             --text-main: #ffffff; --text-sec: #8e8e93;
             --ios-blue: #0a84ff; --ios-orange: #ff9f0a; --ios-purple: #bf5af2; --ios-green: #30d158;
+            --ios-red: #ff3b30;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-dark); color: var(--text-main); display: flex; justify-content: center; min-height: 100vh; padding: 10px 12px 85px 12px; }
@@ -59,7 +60,7 @@
         
         .alarm-options { display: flex; flex-direction: column; gap: 8px; width: 100%; } .alarm-opt-card { background: #08080a; border: 1px solid var(--card-border); border-radius: 14px; padding: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: 0.2s; } .alarm-opt-card.selected { border-color: var(--accent-glow); background: rgba(255, 174, 0, 0.08); } .alarm-opt-text h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; } .alarm-opt-text p { font-size: 11px; color: var(--text-sec); } .check-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--text-sec); display: flex; align-items: center; justify-content: center; } .alarm-opt-card.selected .check-circle { border-color: var(--accent-glow); background: var(--accent-glow); } .alarm-opt-card.selected .check-circle::after { content: "✓"; font-size: 11px; color: #000; font-weight: bold; }
         
-        .automation-list { display: flex; flex-direction: column; gap: 10px; } .shortcut-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 14px; display: flex; align-items: center; justify-content: space-between; } .shortcut-left { display: flex; align-items: center; gap: 12px; } .shortcut-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; flex-shrink: 0; } .icon-blue { background-color: var(--ios-blue); } .icon-orange { background-color: var(--ios-orange); } .icon-purple { background-color: var(--ios-purple); } .shortcut-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; } .shortcut-info p { font-size: 11px; color: var(--text-sec); }
+        .automation-list { display: flex; flex-direction: column; gap: 10px; } .shortcut-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 14px; display: flex; align-items: center; justify-content: space-between; } .shortcut-left { display: flex; align-items: center; gap: 12px; } .shortcut-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; flex-shrink: 0; } .icon-blue { background-color: var(--ios-blue); } .icon-orange { background-color: var(--ios-orange); } .icon-purple { background-color: var(--ios-purple); } .icon-red { background-color: var(--ios-red); } .shortcut-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; } .shortcut-info p { font-size: 11px; color: var(--text-sec); }
         
         .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; } .switch input { opacity: 0; width: 0; height: 0; } .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #39393d; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 24px; } .slider-switch:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); } input:checked + .slider-switch { background-color: var(--ios-green); } input:checked + .slider-switch:before { transform: translateX(18px); }
         
@@ -79,7 +80,7 @@
         <h1>LED Control</h1>
         <div class="header-right">
             <div class="status-badge evde" id="evDurumBadge" onclick="evDurumuTetikle()">🏠 Evde</div>
-            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.4 (Bulletproof)')">⚙️</div>
+            <div class="settings-icon" onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v7.5 (UDP Sync Ready)')">⚙️</div>
         </div>
     </header>
 
@@ -132,6 +133,22 @@
     <div id="tab-otomasyon" class="tab-content">
         <div class="info-card" style="padding: 12px 16px; margin-bottom: 2px;"><p style="font-size: 12px; color: var(--text-sec); line-height: 1.4;">Bu otomasyonlar iPhone'unuzun arka planındaki <b>Wi-Fi bağlantısını</b> algılayarak LED'leri evde olup olmama durumunuza göre otomatik yönetir.</p></div>
         <div class="automation-list">
+            
+            <!-- YENİ: PC SES SENKRONİZASYONU BUTONU -->
+            <div class="shortcut-card">
+                <div class="shortcut-left">
+                    <div class="shortcut-icon icon-red" style="background-color: #ff3b30;">🎵</div>
+                    <div class="shortcut-info">
+                        <h4>PC Ses Senkronizasyonu</h4>
+                        <p>Bilgisayar sesini anlık LED'lere yansıtır</p>
+                    </div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="udpSwitch" onchange="udpTetikle(this.checked)">
+                    <span class="slider-switch"></span>
+                </label>
+            </div>
+
             <div class="shortcut-card"><div class="shortcut-left"><div class="shortcut-icon icon-blue">🏠</div><div class="shortcut-info"><h4>Eve Geldiğimde Aç</h4><p>Ev Wi-Fi ağına bağlanıldığında</p></div></div><label class="switch"><input type="checkbox" checked onchange="otomasyonKaydet('homeDetect', this.checked)"><span class="slider-switch"></span></label></div>
             <div class="shortcut-card"><div class="shortcut-left"><div class="shortcut-icon icon-orange">🚶</div><div class="shortcut-info"><h4>Evden Çıktığımda Kapat</h4><p>Ev Wi-Fi ağından kopulduğunda</p></div></div><label class="switch"><input type="checkbox" checked onchange="otomasyonKaydet('outDetect', this.checked)"><span class="slider-switch"></span></label></div>
             <div class="shortcut-card"><div class="shortcut-left"><div class="shortcut-icon icon-purple">🔔</div><div class="shortcut-info"><h4>Otomasyon Bildirimleri</h4><p>Giriş/Çıkış yapıldığında ekrana bildir</p></div></div><label class="switch"><input type="checkbox" checked onchange="otomasyonKaydet('notif', this.checked)"><span class="slider-switch"></span></label></div>
@@ -212,6 +229,7 @@
     }
 
     let ledAcikMi = false; 
+    let udpAktifMi = false;
 
     // BAĞLANTI DURUMU DİNLEYİCİSİ (Gerçek zamanlı bağlantı testi)
     db.ref('.info/connected').on('value', function(snap) {
@@ -229,6 +247,18 @@
             try { localStorage.setItem("son_parlaklik", sonKaydedilenParlaklik); } catch(e) {}
         }
     });
+
+    // UDP DURUM DİNLEYİCİSİ
+    db.ref('/otomasyonlar/udpAktif').on('value', (snap) => {
+        udpAktifMi = snap.val() === true;
+        const udpSwitch = document.getElementById('udpSwitch');
+        if (udpSwitch) udpSwitch.checked = udpAktifMi;
+    });
+
+    // UDP TETİKLEME FONKSİYONU
+    function udpTetikle(durum) {
+        db.ref('/otomasyonlar/udpAktif').set(durum);
+    }
 
     function gucKapatAc() {
         const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
@@ -276,7 +306,10 @@
         db.ref().update(koli); 
     }
 
-    function modUygula(yuzde, modAdi) { document.getElementById('parlaklikSurgusu').value = yuzde; parlaklikDegisti(yuzde); }
+    function modUygula(yuzde, modAdi) { 
+        document.getElementById('parlaklikSurgusu').value = yuzde; 
+        parlaklikDegisti(yuzde); 
+    }
     
     function fadeDegisti(deger) {
         const metin = deger <= 3 ? "Anlık / Keskin (" + deger + ")" : (deger <= 6 ? "Normal (" + deger + ")" : "Sinematik (" + deger + ")");
@@ -337,7 +370,6 @@
             surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik; 
             metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
         } else { 
-            // Boş bile gelse sistemi açık konuma kitlemesin diye her türlü kapalıya alır
             ledAcikMi = false; btn.classList.remove('active'); 
             surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)"; 
         }
