@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LED Control</title>
+    
+    <link rel="apple-touch-icon" href="logo.jpg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LED Control">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        /* Sadece Tailwind ile yapılamayan özel ince ayarlar */
+        body { -webkit-tap-highlight-color: transparent; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: flex; flex-direction: column; animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Apple Tarzı Kalın Range Slider */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 26px; background: #2c2c2e; border-radius: 13px; border: 1px solid #3a3a3c; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #ffffff; margin-top: 0px; box-shadow: 0 2px 8px rgba(0,0,0,0.4); cursor: pointer; transition: transform 0.15s ease; }
+        input[type=range]:active::-webkit-slider-thumb { transform: scale(1.15); background: #eab308; }
+
+        /* Power Butonu Özel Efektleri */
+        .power-btn { background: #1c1c1e; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .power-btn.active { border-color: #eab308; box-shadow: 0 0 45px rgba(234, 179, 8, 0.25), inset 0 0 15px rgba(234, 179, 8, 0.1); }
+        .power-btn .power-icon { color: #48484a; transition: all 0.4s ease; }
+        .power-btn.active .power-icon { color: #eab308; filter: drop-shadow(0 0 10px rgba(234, 179, 8, 0.6)); }
+
+        /* Alarm Seçenek Kartı Active Durumu */
+        .alarm-opt-card { transition: all 0.2s ease; }
+        .alarm-opt-card.selected { border-color: #eab308; background: rgba(234, 179, 8, 0.08); }
+        .check-circle { color: transparent; transition: all 0.2s ease; }
+        .alarm-opt-card.selected .check-circle { background-color: #eab308; border-color: #eab308; color: #000; }
+
+        /* Alt Navigasyon Active Durumu */
+        .nav-item { color: #8e8e93; transition: all 0.3s; }
+        .nav-item.active { color: #eab308; transform: translateY(-2px); }
+        .nav-item.active svg { stroke: #eab308; }
+    </style>
+</head>
+<body class="bg-black text-white font-sans overflow-x-hidden min-h-screen pb-28 pt-8 px-4 flex justify-center">
+
+<div class="w-full max-w-md flex flex-col gap-5">
+    
+    <header class="flex justify-between items-center px-1 mb-2">
+        <h1 class="text-[22px] font-bold tracking-wide">Yatak Odası</h1>
+        <div class="flex items-center gap-3">
+            <div id="evDurumBadge" class="status-badge evde px-3 py-1.5 rounded-full text-xs font-semibold flex items-center bg-[#30d158]/15 text-[#30d158] cursor-pointer transition-colors" onclick="evDurumuTetikle()">🏠 Evde</div>
+            <button onclick="alert('⚙️ Sistem Ayarları\nESP32 IP: 192.168.1.50\nSürüm: v8.0 (Modern UI)')" class="w-8 h-8 rounded-full bg-[#1c1c1e] border border-[#2c2c2e] flex justify-center items-center">
+                <span class="text-sm">⚙️</span>
+            </button>
+        </div>
+    </header>
+
+    <div id="tab-anasayfa" class="tab-content active gap-4">
+        <div class="bg-[#1c1c1e] border border-[#2c2c2e] rounded-[32px] p-7 flex flex-col items-center shadow-lg">
+            
+            <div id="gucButonu" class="power-btn w-36 h-36 rounded-full border-[3px] border-[#2c2c2e] flex justify-center items-center cursor-pointer mb-6" onclick="gucKapatAc()">
+                <svg class="power-icon w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a1 1 0 011 1v9a1 1 0 11-2 0V3a1 1 0 011-1zm4.22 3.78a1 1 0 011.41 0 8 8 0 11-11.26 0 1 1 0 011.41 1.42 6 6 0 108.44 0 1 1 0 010-1.42z"/></svg>
+            </div>
+            
+            <p id="durumMetni" class="text-[#8e8e93] text-xs font-bold tracking-widest uppercase mb-8 h-4">SİSTEM BAŞLATILIYOR...</p>
+            
+            <div class="w-full flex flex-col gap-2">
+                <div class="flex justify-between text-xs font-semibold text-[#8e8e93]">
+                    <span>Parlaklık</span>
+                    <span id="parlaklikYuzde">%0</span>
+                </div>
+                <input type="range" id="parlaklikSurgusu" min="1" max="100" value="0" oninput="parlaklikDegisti(this.value)">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+            <button class="bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl py-4 flex flex-col items-center gap-2 active:bg-[#eab308]/10 active:border-[#eab308] transition-colors" onclick="modUygula(15, 'Gece Loş Modu')">
+                <span class="text-2xl">🌙</span><span class="text-[11px] font-semibold text-white">Loş Gece</span>
+            </button>
+            <button class="bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl py-4 flex flex-col items-center gap-2 active:bg-[#eab308]/10 active:border-[#eab308] transition-colors" onclick="modUygula(10, 'Sinema Modu')">
+                <span class="text-2xl">🍿</span><span class="text-[11px] font-semibold text-white">Sinema</span>
+            </button>
+            <button class="bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl py-4 flex flex-col items-center gap-2 active:bg-[#eab308]/10 active:border-[#eab308] transition-colors" onclick="modUygula(100, 'Maksimum Güç')">
+                <span class="text-2xl">☀️</span><span class="text-[11px] font-semibold text-white">Tam Güç</span>
+            </button>
+        </div>
+
+        <div class="bg-[#1c1c1e] border border-[#2c2c2e] rounded-3xl p-5 mt-1">
+            <div class="text-[10px] font-bold text-[#8e8e93] tracking-widest uppercase mb-4">🎚️ Geçiş Yumuşaklığı</div>
+            <div class="w-full flex flex-col gap-2">
+                <div class="flex justify-between text-[11px] font-semibold text-[#8e8e93]">
+                    <span>Tepki Süresi</span>
+                    <span id="fadeMetin">Anlık / Keskin (3)</span>
+                </div>
+                <input type="range" id="fadeSurgusu" min="1" max="10" value="3" oninput="fadeDegisti(this.value)">
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-zamanlayici" class="tab-content gap-4">
+        <div class="bg-[#1c1c1e] border border-[#2c2c2e] rounded-[32px] p-6 flex flex-col items-center">
+            
+            <div class="w-full flex justify-between px-2 mb-6">
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] font-bold text-[#8e8e93] tracking-wider mb-1">🛏️ YATMA</span>
+                    <h2 id="yatmaSaati" class="text-2xl font-bold">00:20</h2>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] font-bold text-[#8e8e93] tracking-wider mb-1">⏰ UYANMA</span>
+                    <h2 id="uyanmaSaati" class="text-2xl font-bold">09:00</h2>
+                </div>
+            </div>
+            
+            <div class="relative w-48 h-48 flex justify-center items-center mb-6">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    <circle fill="none" stroke="#2c2c2e" stroke-width="10" cx="50" cy="50" r="40"></circle>
+                    <circle id="uykuYayi" fill="none" stroke="#eab308" stroke-width="10" stroke-linecap="round" cx="50" cy="50" r="40" stroke-dasharray="90, 251.2" class="transition-all duration-1000 ease-out"></circle>
+                </svg>
+                <div class="absolute flex flex-col items-center text-center">
+                    <span id="uykuSuresiMetin" class="text-xl font-bold">8 sa. 40 dk.</span>
+                    <span class="text-[10px] text-[#8e8e93] mt-1 font-medium">iOS Uyku Planı<br>Senkronize</span>
+                </div>
+            </div>
+
+            <div class="w-full">
+                <div class="text-[10px] font-bold text-[#8e8e93] tracking-widest uppercase mb-3 px-1">📲 Uyandırma Modu</div>
+                <div class="flex flex-col gap-2">
+                    <div id="opt-1" class="alarm-opt-card selected border border-[#2c2c2e] bg-black rounded-2xl p-4 flex justify-between items-center cursor-pointer" onclick="alarmSecim(1)">
+                        <div>
+                            <h4 class="text-[13px] font-bold mb-1">🌅 Gün Doğumu (Yavaş)</h4>
+                            <p class="text-[11px] text-[#8e8e93]">%1'den %100'e yavaşça açılır.</p>
+                        </div>
+                        <div class="check-circle w-[18px] h-[18px] rounded-full border-2 border-[#8e8e93] flex justify-center items-center text-[10px] font-black">✓</div>
+                    </div>
+                    <div id="opt-2" class="alarm-opt-card border border-[#2c2c2e] bg-black rounded-2xl p-4 flex justify-between items-center cursor-pointer" onclick="alarmSecim(2)">
+                        <div>
+                            <h4 class="text-[13px] font-bold mb-1">✨ Smooth Flaşı</h4>
+                            <p class="text-[11px] text-[#8e8e93]">Pürüzsüzce yanıp sönerek uyarır.</p>
+                        </div>
+                        <div class="check-circle w-[18px] h-[18px] rounded-full border-2 border-[#8e8e93] flex justify-center items-center text-[10px] font-black">✓</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-otomasyon" class="tab-content gap-4">
+        <div class="bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl p-4">
+            <p class="text-[11px] text-[#8e8e93] leading-relaxed text-center">Bu otomasyonlar iPhone'unuzun arka planındaki <b>Wi-Fi bağlantısını</b> algılayarak LED'leri evde olup olmama durumunuza göre otomatik yönetir.</p>
+        </div>
+        
+        <div class="flex flex-col gap-3">
+            <div class="bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl p-4 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-[10px] bg-[#0a84ff] flex justify-center items-center text-lg shadow-md">🏠</div>
+                    <div>
+                        <h4 class="text-[13px] font-bold">Eve Geldiğimde Aç</h4>
+                        <p class="text-[11px] text-[#8e8e93] mt-0.5">Ev ağına bağlanıldığında</p>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked class="sr-only peer" onchange="otomasyonKaydet('homeDetect', this.checked)">
+                    <div class="w-11 h-6 bg-[#3a3a3c] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-gray-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#30d158]"></div>
+                </label>
+            </div>
+
+            <div class="bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl p-4 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-[10px] bg-[#ff9f0a] flex justify-center items-center text-lg shadow-md">🚶</div>
+                    <div>
+                        <h4 class="text-[13px] font-bold">Evden Çıktığımda Kapat</h4>
+                        <p class="text-[11px] text-[#8e8e93] mt-0.5">Ev ağından koptuğunda</p>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked class="sr-only peer" onchange="otomasyonKaydet('outDetect', this.checked)">
+                    <div class="w-11 h-6 bg-[#3a3a3c] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-gray-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#30d158]"></div>
+                </label>
+            </div>
+
+            <div class="bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl p-4 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-[10px] bg-[#bf5af2] flex justify-center items-center text-lg shadow-md">🔔</div>
+                    <div>
+                        <h4 class="text-[13px] font-bold">Bildirim Gönder</h4>
+                        <p class="text-[11px] text-[#8e8e93] mt-0.5">Giriş/Çıkış yapıldığında</p>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked class="sr-only peer" onchange="otomasyonKaydet('notif', this.checked)">
+                    <div class="w-11 h-6 bg-[#3a3a3c] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-gray-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#30d158]"></div>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[360px] z-50">
+    <nav class="bg-[#1c1c1e]/85 backdrop-blur-xl border border-[#3a3a3c] rounded-[30px] px-6 py-3 flex justify-between items-center shadow-[0_15px_30px_rgba(0,0,0,0.8)]">
+        
+        <div class="nav-item active flex flex-col items-center gap-1.5 cursor-pointer w-16" onclick="sekmeDegistir('anasayfa', this)">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            <span class="text-[10px] font-semibold">Ana Sayfa</span>
+        </div>
+        
+        <div class="nav-item flex flex-col items-center gap-1.5 cursor-pointer w-16" onclick="sekmeDegistir('zamanlayici', this)">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span class="text-[10px] font-semibold">Saat</span>
+        </div>
+        
+        <div class="nav-item flex flex-col items-center gap-1.5 cursor-pointer w-16" onclick="sekmeDegistir('otomasyon', this)">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            <span class="text-[10px] font-semibold">Otomasyon</span>
+        </div>
+        
+    </nav>
+</div>
+
+<script>
+    // JS KODLARININ TAMAMI BURADA (BİREBİR AYNI)
+    window.onerror = function(msg, url, lineNo) {
+        const metin = document.getElementById('durumMetni');
+        if (metin) metin.innerHTML = "<span style='color:#ff3b30; font-size:11px; font-weight:bold;'>SİSTEM ÇÖKTÜ:<br>" + msg + " (Satır: " + lineNo + ")</span>";
+        return false;
+    };
+
+    if (typeof firebase === 'undefined') {
+        document.getElementById('durumMetni').innerHTML = "<span style='color:#ff3b30; font-size:12px; font-weight:bold;'>FİREBASE ENGELLENDİ!<br>Safari reklam engelleyiciyi kapatın.</span>";
+        throw new Error("Firebase Yüklenemedi");
+    }
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyBEhsUAqN4l-ATvLFCjLkBvTaAAXdvF8qM", 
+        databaseURL: "https://led-control-79bc3-default-rtdb.europe-west1.firebasedatabase.app", 
+        projectId: "led-control-79bc3" 
+    };
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    const db = firebase.database();
+
+    function sekmeDegistir(sekmeAdi, element) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); 
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + sekmeAdi).classList.add('active'); 
+        element.classList.add('active');
+    }
+
+    let sonKaydedilenParlaklik = 65;
+    try {
+        let hafiza = localStorage.getItem("son_parlaklik");
+        if (hafiza) sonKaydedilenParlaklik = parseInt(hafiza);
+    } catch (e) {
+        console.warn("Hafıza erişimi engellendi, varsayılan değer kullanılıyor.");
+    }
+
+    let ledAcikMi = false; 
+
+    db.ref('.info/connected').on('value', function(snap) {
+        const metin = document.getElementById('durumMetni');
+        if (snap.val() === true) {
+            metin.innerHTML = "<span style='color:#30d158;'>BAĞLANTI KURULDU, VERİ BEKLENİYOR...</span>";
+        } else {
+            metin.textContent = "İNTERNET VEYA FİREBASE BEKLENİYOR...";
+        }
+    });
+
+    db.ref('/sonParlaklik').on('value', (snap) => {
+        if (snap.val() && snap.val() > 0) {
+            sonKaydedilenParlaklik = snap.val();
+            try { localStorage.setItem("son_parlaklik", sonKaydedilenParlaklik); } catch(e) {}
+        }
+    });
+
+    function gucKapatAc() {
+        const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
+        const surgusu = document.getElementById('parlaklikSurgusu'); const yuzdeMetin = document.getElementById('parlaklikYuzde');
+        ledAcikMi = !ledAcikMi;
+        let koli = {}; 
+        
+        if (ledAcikMi) {
+            btn.classList.add('active'); surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik;
+            metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
+            koli['/durum'] = "ACIK"; koli['/parlaklik'] = parseInt(sonKaydedilenParlaklik);
+        } else {
+            if (surgusu.value > 0) {
+                sonKaydedilenParlaklik = surgusu.value;
+                try { localStorage.setItem("son_parlaklik", sonKaydedilenParlaklik); } catch(e) {}
+                koli['/sonParlaklik'] = parseInt(sonKaydedilenParlaklik);
+            }
+            btn.classList.remove('active'); surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)";
+            koli['/durum'] = "KAPALI"; koli['/parlaklik'] = 0;
+        }
+        db.ref().update(koli); 
+    }
+
+    function parlaklikDegisti(deger) {
+        deger = parseInt(deger);
+        document.getElementById('parlaklikYuzde').textContent = "%" + deger; 
+        let koli = {};
+        
+        if (deger > 0) {
+            sonKaydedilenParlaklik = deger;
+            try { localStorage.setItem("son_parlaklik", deger); } catch(e) {}
+            koli['/sonParlaklik'] = deger;
+        }
+        
+        if (!ledAcikMi && deger > 0) { 
+            ledAcikMi = true; document.getElementById('gucButonu').classList.add('active'); 
+        } else if (deger == 0) { 
+            ledAcikMi = false; document.getElementById('gucButonu').classList.remove('active'); 
+        }
+        
+        document.getElementById('durumMetni').textContent = ledAcikMi ? "LED'LER AÇIK (%" + deger + ")" : "LED'LER KAPALI (%0)";
+        
+        koli['/durum'] = ledAcikMi ? "ACIK" : "KAPALI";
+        koli['/parlaklik'] = deger;
+        db.ref().update(koli); 
+    }
+
+    function modUygula(yuzde, modAdi) { document.getElementById('parlaklikSurgusu').value = yuzde; parlaklikDegisti(yuzde); }
+    
+    function fadeDegisti(deger) {
+        const metin = deger <= 3 ? "Anlık / Keskin (" + deger + ")" : (deger <= 6 ? "Normal (" + deger + ")" : "Sinematik (" + deger + ")");
+        document.getElementById('fadeMetin').textContent = metin; db.ref('/fadeHizi').set(parseInt(deger));
+    }
+    
+    db.ref('/fadeHizi').on('value', (snap) => {
+        const veri = snap.val();
+        if (veri !== null) {
+            document.getElementById('fadeSurgusu').value = veri;
+            const metin = veri <= 3 ? "Anlık / Keskin (" + veri + ")" : (veri <= 6 ? "Normal (" + veri + ")" : "Sinematik (" + veri + ")");
+            document.getElementById('fadeMetin').textContent = metin;
+        }
+    });
+
+    function alarmSecim(secenekNo) {
+        document.querySelectorAll('.alarm-opt-card').forEach(el => el.classList.remove('selected'));
+        document.getElementById('opt-' + secenekNo).classList.add('selected'); db.ref('/otomasyonlar/alarmModu').set(secenekNo === 1 ? "FADE_IN" : "SMOOTH_BLINK");
+    }
+    function otomasyonKaydet(anahtar, durum) { db.ref('/otomasyonlar/' + anahtar).set(durum); }
+
+    function uykuCemberiniGuncelle(yatma, uyanma) {
+        document.getElementById('yatmaSaati').textContent = yatma; 
+        document.getElementById('uyanmaSaati').textContent = uyanma;
+
+        if (!yatma || !uyanma) return;
+        
+        let [ySaat, yDak] = yatma.toString().split(/[:.]/).map(Number);
+        let [uSaat, uDak] = uyanma.toString().split(/[:.]/).map(Number);
+        
+        let yatmaDakika = (ySaat || 0) * 60 + (yDak || 0);
+        let uyanmaDakika = (uSaat || 0) * 60 + (uDak || 0);
+        
+        if (uyanmaDakika <= yatmaDakika) uyanmaDakika += 24 * 60;
+        
+        let toplamFark = uyanmaDakika - yatmaDakika;
+        let saatFark = Math.floor(toplamFark / 60);
+        let dakFark = toplamFark % 60;
+        
+        if (isNaN(saatFark) || isNaN(dakFark)) {
+            document.getElementById('uykuSuresiMetin').textContent = "Bekleniyor...";
+            document.getElementById('uykuYayi').setAttribute('stroke-dasharray', "0, 251.2");
+        } else {
+            document.getElementById('uykuSuresiMetin').textContent = saatFark + " sa. " + dakFark + " dk.";
+            document.getElementById('uykuYayi').setAttribute('stroke-dasharray', ((toplamFark / (24 * 60)) * 251.2) + ", 251.2");
+        }
+    }
+    uykuCemberiniGuncelle("00:20", "09:00");
+
+    db.ref('/durum').on('value', (snap) => {
+        const veri = snap.val();
+        const btn = document.getElementById('gucButonu'); const metin = document.getElementById('durumMetni');
+        const surgusu = document.getElementById('parlaklikSurgusu'); const yuzdeMetin = document.getElementById('parlaklikYuzde');
+        
+        if (veri === "ACIK" || veri === true) { 
+            ledAcikMi = true; btn.classList.add('active'); 
+            surgusu.value = sonKaydedilenParlaklik; yuzdeMetin.textContent = "%" + sonKaydedilenParlaklik; 
+            metin.textContent = "LED'LER AÇIK (%" + sonKaydedilenParlaklik + ")"; 
+        } else { 
+            ledAcikMi = false; btn.classList.remove('active'); 
+            surgusu.value = 0; yuzdeMetin.textContent = "%0"; metin.textContent = "LED'LER KAPALI (%0)"; 
+        }
+    });
+
+    db.ref('/parlaklik').on('value', (snap) => { 
+        const veri = snap.val();
+        if (veri !== null && veri > 0) { 
+            sonKaydedilenParlaklik = veri;
+            try { localStorage.setItem("son_parlaklik", veri); } catch(e) {}
+            if (ledAcikMi) {
+                document.getElementById('parlaklikSurgusu').value = veri; 
+                document.getElementById('parlaklikYuzde').textContent = "%" + veri; 
+                document.getElementById('durumMetni').textContent = "LED'LER AÇIK (%" + veri + ")";
+            }
+        } 
+    });
+
+    db.ref('/uykuPlani').on('value', (snap) => { const veri = snap.val(); if (veri && veri.yatma && veri.uyanma) { uykuCemberiniGuncelle(veri.yatma, veri.uyanma); } });
+
+    db.ref('/otomasyonlar/alarmModu').on('value', (snap) => {
+        const secilenMod = snap.val();
+        document.querySelectorAll('.alarm-opt-card').forEach(el => el.classList.remove('selected'));
+        if (secilenMod === "SMOOTH_BLINK") { document.getElementById('opt-2').classList.add('selected'); } 
+        else { document.getElementById('opt-1').classList.add('selected'); }
+    });
+
+    let evdeMiyim = true;
+    db.ref('/otomasyonlar/evdeMi').on('value', (snap) => {
+        let durum = snap.val();
+        if (durum === null) durum = true; 
+        evdeMiyim = durum;
+        
+        const badge = document.getElementById('evDurumBadge');
+        if (evdeMiyim) {
+            badge.innerHTML = "🏠 Evde";
+            badge.className = "status-badge evde px-3 py-1.5 rounded-full text-xs font-semibold flex items-center bg-[#30d158]/15 text-[#30d158] cursor-pointer transition-colors";
+        } else {
+            badge.innerHTML = "🌍 Dışarıda";
+            badge.className = "status-badge disarida px-3 py-1.5 rounded-full text-xs font-semibold flex items-center bg-[#8e8e93]/15 text-[#8e8e93] cursor-pointer transition-colors";
+        }
+    });
+
+    function evDurumuTetikle() {
+        db.ref('/otomasyonlar/evdeMi').set(!evdeMiyim);
+    }
+</script>
+</body>
+</html>
